@@ -10,13 +10,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -42,7 +35,7 @@ button {
   background: #335CFE;
   color: white;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
 }
@@ -55,7 +48,7 @@ input, select {
   width: 100%;
   padding: 10px;
   margin-top: 6px;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #f7f7f7;
   border: 1px solid #ddd;
 }
@@ -65,11 +58,239 @@ input, select {
   display: flex;
   gap: 10px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #444;
   text-decoration: none;
 }
 .sidebar-link:hover {
   background: #e5e7eb;
 }
+
+/* ===== ADDED STYLES (from user) ===== */
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f4f4f5;
+  color: #111827;
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Sidebar link */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #4b5563;
+}
+
+.sidebar-link:hover {
+  background-color: #e5e7eb;
+}
+
+/* Inputs */
+.input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  margin-top: 4px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-ghost {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Simple table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.table thead tr {
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table tbody tr {
+  border-bottom: none;
+}
+
+/* Dashboard layout */
+.dashboard-main {
+  display: flex;
+}
+
+.page-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.page-header p {
+  color: #6b7280;
+  margin-bottom: 8px
+}
+
+.filters-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.filters-row .filter-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filters-row .filter-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  padding-left: 2px;
+}
+.filters-row .filter {
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 10px 14px;
+  border-radius: 4px;
+  color: #111827;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 140px;
+  font-size: 14px;
+  height: 40px;
+}
+.filters-row .search {
+  width: 320px;
+}
+
+/* Card wrapper for tables */
+.card {
+  background: #ffffff;
+  padding: 10px;
+  overflow: hidden;
+}
+
+/* Remove horizontal padding for specific cards (used on Orders table) */
+.card.card-no-hpad {
+  /* keep vertical padding, remove horizontal padding */
+  padding-top: 0;
+  padding-bottom: 10px;
+  padding-left: 0;
+  padding-right: 0;
+}
+.card.card-no-hpad .table th,
+.card.card-no-hpad .table td {
+  padding-left: 8px;
+  padding-right: 0;
+}
+
+/* Ensure the last cell in rows has no right padding to remove visible gap */
+.card.card-no-hpad .table th:last-child,
+.card.card-no-hpad .table td:last-child {
+  padding-right: 0 !important;
+}
+
+.table thead tr {
+  background: #f8fafc;
+}
+.table th {
+  font-weight: 600;
+  font-size: 13px;
+}
+.table tbody tr:nth-child(even) {
+  background: #f3f4f6;
+}
+.table tbody tr:hover {
+  background: #eef2f7;
+}
+
+/* Status pills */
+.status-pill {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.status-moving { background: #e6f3ff; color: #075985; }
+.status-pending { background: #fff6e6; color: #92400e; }
+.status-completed { background: #ecfdf5; color: #065f46; }
+.status-canceled { background: #fff1f2; color: #9f1239; }
+
+/* Detail panel */
+.detail-panel {
+  width: 360px;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+.detail-panel .header {
+  display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;
+}
+.detail-panel h3 { margin:0; }
+.detail-panel p { margin:0; color:#6b7280; font-size:13px; }
+
+.stop-card {
+  background: #f8fafc;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.stop-left-border {
+  border-left: 6px solid #10b981; padding-left: 12px; background: white; border-radius: 4px; padding: 12px;
+}
+
+.detail-list strong { display:inline-block; width: 80px; }
+
 
