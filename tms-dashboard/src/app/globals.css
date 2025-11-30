@@ -1,6 +1,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary-blue: #2563eb;
 }
 
 @theme inline {
@@ -146,13 +147,21 @@ a {
 
 .table th,
 .table td {
-  padding: 12px 14px;
+  padding: 12px 12px;
   font-size: 14px;
 }
 
 .table thead tr {
-  background: #f3f4f6;
+  background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
+}
+
+/* Remove the internal header row border for the Orders card/header
+   so only the wrapper's full-width border is visible. This overrides
+   the global header border inside the card context. */
+.card.card-no-hpad .table thead tr,
+.table-header .table thead tr {
+  border-bottom: none;
 }
 
 .table tbody tr {
@@ -162,6 +171,8 @@ a {
 /* Dashboard layout */
 .dashboard-main {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .page-header h2 {
@@ -183,8 +194,210 @@ a {
 .filters-row .filter-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  position: relative;
 }
+
+/* Status dropdown styling */
+.status-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  padding: 12px;
+  z-index: 1000;
+  box-sizing: border-box;
+  min-width: 280px;
+  max-width: 520px;
+  width: auto; /* responsive width */
+}
+/* pointer arrow aligned to dropdown left edge */
+.status-dropdown::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 12px; /* adjust to align with filter button */
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 9px solid #e5e7eb; /* border/shadow color */
+  z-index: 999;
+}
+.status-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 12px; /* same left to line up */
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #ffffff; /* dropdown background */
+  z-index: 1001;
+}
+.status-list { display:flex; flex-direction:column; gap:8px; }
+.status-item { display:flex; align-items:center; gap:8px; }
+.status-item .status-checkbox { margin:0; }
+
+/* Prevent the label's extra whitespace from being clickable: only the checkbox and the status button accept pointer events */
+.status-item { pointer-events: none; }
+.status-item .status-checkbox, .status-item .status-btn { pointer-events: auto; }
+
+/* Search box inside dropdown */
+.status-search { display:flex; align-items:center; gap:8px; }
+.status-search-box { display:flex; align-items:center; gap:8px; padding:0 8px; height:40px; border-radius:4px; background:#fff; border:1px solid #e5e7eb; flex:1 }
+.status-search-box svg { position:static; left:auto; top:auto; transform:none; pointer-events:none; display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center }
+.status-search-input { border: none; outline: none; font-size:14px; color:#111827; width:100%; background:transparent; height:100%; text-align:left; padding:0; display:flex; align-items:center }
+
+/* Shared search box used in header and dropdown */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  height: 40px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.search-box .search-icon {
+  font-size: 20px;
+  color: #9ca3af;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+}
+.search-box .search-input {
+  margin-top: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.status-search-clear {
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 4px;
+  transition: background .12s ease, color .12s ease;
+}
+.status-search-clear svg { color: #6b7280; }
+.status-search-clear.active svg { color: var(--primary-blue); }
+.status-search-clear:hover { background: rgba(37,99,235,0.06); }
+.status-search-clear:hover svg { color: var(--primary-blue); }
+
+/* When inactive (no selection) make the clear control non-interactive and not hoverable */
+.status-search-clear:not(.active), .status-search-clear:disabled {
+  cursor: default;
+  pointer-events: none;
+  background: transparent;
+}
+.status-search-clear:not(.active) svg, .status-search-clear:disabled svg {
+  color: #6b7280;
+}
+
+/* Tooltip above the clear icon */
+.status-clear-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(17,24,39,0.95);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s ease;
+  z-index: 1200;
+}
+.status-clear-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(17,24,39,0.95) transparent transparent transparent;
+}
+.status-search-clear.active:hover .status-clear-tooltip,
+.status-search-clear.active:focus .status-clear-tooltip,
+.status-search-clear.active:focus-visible .status-clear-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* Custom checkbox to match Google-like look and use primary blue when checked */
+.status-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: transparent;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.status-checkbox:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.status-checkbox:checked {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M20 6L9 17l-5-5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+/* fallback for older browsers: keep accent-color if available */
+.status-checkbox:not(:checked) { accent-color: var(--primary-blue); }
+
+.status-btn { display:inline-flex; align-items:center; padding:6px 8px; border-radius:4px; font-size:14px; gap:8px; }
+.status-btn-moving { background: #e6f3ff; color: #075985; }
+.status-btn-pending { background: #fff6e6; color: #92400e; }
+.status-btn-completed { background: #ecfdf5; color: #065f46; }
+.status-btn-canceled { background: #fff1f2; color: #9f1239; }
+.status-btn:hover { filter:brightness(0.98); }
+.status-item-icon { display:inline-flex; vertical-align:middle; }
+
+/* status dropdown chevron rotation */
+.status-chevron {
+  transition: transform .16s ease;
+  display: inline-flex;
+  vertical-align: middle;
+  transform-origin: center;
+}
+.status-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* When checkbox is checked, add a slight ring to the button */
+.status-item .status-checkbox:checked + .status-btn { box-shadow: 0 0 0 2px rgba(59,130,246,0.08); }
 .filters-row .filter-label {
   font-size: 12px;
   color: #6b7280;
@@ -225,11 +438,106 @@ a {
   padding-bottom: 10px;
   padding-left: 0;
   padding-right: 0;
+  display: flex;
+  flex-direction: column;
 }
 .card.card-no-hpad .table th,
 .card.card-no-hpad .table td {
-  padding-left: 8px;
+  padding-left: 16px;
   padding-right: 0;
+}
+
+/* Make the left column fill available height and the table wrapper scroll to viewport bottom */
+.dashboard-main > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.card.header-card {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.card.card-no-hpad {
+  flex: 1 1 auto;
+}
+.card.card-no-hpad .table-wrapper {
+  /* subtract header + filters approximate height so table reaches bottom */
+  max-height: calc(var(--vh, 1vh) * 100 - 180px);
+  overflow-y: auto;
+  flex: 1 1 auto;
+  position: relative;
+}
+
+/* Scrollbar styling for the orders table scroll area */
+.card.card-no-hpad .table-wrapper {
+  /* Do not reserve gutter by default so content can be flush with card
+     edges when no vertical scrollbar is present. `has-scrollbar` will
+     enable the stable gutter when needed. */
+  scrollbar-gutter: auto;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0,0,0,0.12) transparent;
+}
+
+/* WebKit (Chromium, Safari) custom width */
+.card.card-no-hpad .table-wrapper::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+.card.card-no-hpad .table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.card.card-no-hpad .table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 8px;
+  border: 4px solid transparent; /* provide padding so thumb sits inside track */
+  background-clip: padding-box;
+}
+.card.card-no-hpad .table-wrapper .table {
+  margin: 0; /* ensure table aligns with wrapper edges */
+}
+
+/* When a scrollbar is present and we have detected it, reserve the
+   stable gutter so layout doesn't shift; JS toggles `.has-scrollbar`. */
+.card.card-no-hpad.has-scrollbar .table-wrapper {
+  scrollbar-gutter: stable;
+}
+
+/* When the orders table has a vertical scrollbar (the body scrolls),
+   add an extra 16px right padding to the header table so the headings
+   visually align with the scrollable body columns. Applied in the
+   card context to avoid affecting other table headers. */
+.card.card-no-hpad.has-scrollbar .table-header .table {
+  /* Keep the padding inside the header table's box so the
+     card border line remains visible. Using border-box ensures the
+     padding doesn't push outside the header container. */
+  /* Reduce the header table total width by the scrollbar width so
+     the header columns line up with the body table when the body
+     shows a vertical scrollbar. This is more reliable than adding
+     padding on the table element for table-based layouts. */
+  width: calc(100% - 16px);
+  box-sizing: border-box;
+}
+
+/* Remove padding from the header wrapper itself so the card border
+   and bottom border remain flush with the card edges. The inner
+   table now reserves the space internally. */
+.card.card-no-hpad.has-scrollbar .table-header {
+  padding-right: 0;
+  box-sizing: border-box;
+}
+
+/* When there is no scrollbar, ensure both header and body tables
+   occupy the full width so columns are flush with the card content
+   area (no extra right gap). */
+.card.card-no-hpad:not(.has-scrollbar) .table-header .table {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 0;
+}
+.card.card-no-hpad:not(.has-scrollbar) .table-wrapper .table {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Ensure the last cell in rows has no right padding to remove visible gap */
@@ -239,8 +547,22 @@ a {
 }
 
 .table thead tr {
-  background: #f8fafc;
+  background: #ffffff;
 }
+.card.card-no-hpad .table thead th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 5;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+/* When header is rendered as its own table, ensure it visually matches and stays above the scroll */
+.table-header { background: #ffffff; /* ensure a full-width bottom border so the header line remains visible when the inner table is inset */
+  border-bottom: 1px solid #e5e7eb;
+}
+.table-header .table { width: 100%; border-collapse: collapse; }
+.table-header .table th { padding: 12px 12px; font-weight: 600; font-size: 13px; text-align: left; border-bottom: none; background: #ffffff; }
 .table th {
   font-weight: 600;
   font-size: 13px;
@@ -258,22 +580,45 @@ a {
   border-radius: 4px;
   font-weight: 600;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .status-moving { background: #e6f3ff; color: #075985; }
+.status-moving .status-icon { color: #075985; }
 .status-pending { background: #fff6e6; color: #92400e; }
+.status-pending .status-icon { color: #92400e; }
 .status-completed { background: #ecfdf5; color: #065f46; }
+.status-completed .status-icon { color: #065f46; }
 .status-canceled { background: #fff1f2; color: #9f1239; }
+.status-canceled .status-icon { color: #9f1239; }
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.status-text { line-height: 1; }
 
 /* Detail panel */
 .detail-panel {
   width: 360px;
   background: #ffffff;
   border-left: 1px solid #e5e7eb;
-  padding: 16px;
+  padding: 16px 16px 88px 16px; /* extra bottom padding so last card isn't cut off by scrollbars */
   position: sticky;
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
+}
+
+.detail-panel::after {
+  content: "";
+  display: block;
+  height: 28px; /* extra spacer to ensure last card can scroll fully above bottom */
+  pointer-events: none;
 }
 .detail-panel .header {
   display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;
@@ -282,15 +627,149 @@ a {
 .detail-panel p { margin:0; color:#6b7280; font-size:13px; }
 
 .stop-card {
-  background: #f8fafc;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 12px;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  /* left padding = flag width (30px) + desired content padding (16px) = 46px */
+  padding: 16px 16px 16px 46px;
+  margin-bottom: 16px;
+  overflow: visible; /* avoid clipping content inside the card */
 }
 .stop-left-border {
   border-left: 6px solid #10b981; padding-left: 12px; background: white; border-radius: 4px; padding: 12px;
 }
 
+.stop-card .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 8px; /* reduced spacing */
+}
+.stop-flag {
+  position: absolute;
+  left: 0; /* render inside the card */
+  top: 0;
+  width: 30px; /* narrower flag */
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  overflow: hidden; /* clip flag contents to rounded edges */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* start stack, control with flex + auto margins */
+  align-items: center; /* center contents horizontally */
+  writing-mode: vertical-rl;
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); /* subtle inner separation */
+  padding-top: 2px; /* flush number to top */
+  padding-bottom: 6px; /* slight room for bottom icon */
+}
+.stop-flag .flag-number {
+  writing-mode: horizontal-tb;
+  font-size: 13px;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 4px; /* slight gap below number */
+  display: block;
+  order: 0; /* ensure number is first */
+}
+.stop-flag .flag-text {
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex; /* allow centering within available space */
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto; /* take available middle space */
+  margin: 0; /* centered purely by flex */
+  order: 1;
+}
+.stop-flag .flag-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent; /* remove white background per request */
+  border-radius: 0;
+  margin-top: auto; /* push icon to the bottom */
+  margin-bottom: 2px; /* breathing space from bottom radius */
+  order: 2;
+}
+
+/* Completed text color darker green for readability */
+.stop-flag.completed .flag-text { color: #065f46; }
+.stop-flag.moving .flag-text { color: #075985; }
+.stop-flag.pending .flag-text { color: #92400e; }
+.stop-number { display: none; }
+.stop-status-inline {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  z-index: 3;
+}
+.stop-status-inline .status-pill {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-radius: 10px;
+}
+.stop-card .stop-content { margin-left: 0; }
+.stop-card .stop-title { font-weight: 700; color: #111827; margin-bottom: 8px; font-size:14px }
+.stop-card .stop-sub { color:#6b7280; font-size:12px; margin-bottom: 8px }
+.stop-card .stop-row { display:flex; gap:12px; align-items:flex-start; margin-top:16px; border-top: 1px solid #f3f4f6; padding-top: 16px }
+.stop-card .stop-row .meta { color:#6b7280; font-size:13px }
+
+.stop-flag.completed { background: #ecfdf5; }
+.stop-flag.moving { background: #e6f3ff; }
+.stop-flag.pending { background: #fff6e6; }
+
+/* Meta labels inside stop rows to match reference layout */
+.stop-card .meta { display:flex; flex-direction:column; gap:8px; }
+.stop-card .meta .meta-label { color:#6b7280; font-size:12px }
+.stop-card .meta .meta-value { font-weight:700; color:#111827; font-size:14px }
+
+/* Small select used to change stop status (compact, rounded) */
+.stop-status-select {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.assign-btn {
+  width: 100%;
+  border: 1px solid #3b82f6;
+  color: #2563eb;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plate-actions { display:flex; gap:8px }
+.small-ghost { background:#eef2ff; border: none; padding:8px; border-radius:6px; cursor:pointer }
 .detail-list strong { display:inline-block; width: 80px; }
+
+
+
+/* Prevent horizontal scroll on small screens or overflowed elements */
+html, body, #__next {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* Use runtime --vh to avoid mobile browser 100vh issues */
+.app-root {
+  height: calc(var(--vh, 1vh) * 100);
+}
 
 

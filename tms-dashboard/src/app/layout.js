@@ -22,9 +22,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div style={{ display: "flex", minHeight: "100vh" }}>
+        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
           <Sidebar />
-          <main style={{ flex: 1, background: "var(--background)" }}>
+          <main style={{ flex: 1, background: "var(--background)", display: "flex", flexDirection: "column", minHeight: "100vh", overflow: "hidden" }}>
             {children}
           </main>
         </div>
