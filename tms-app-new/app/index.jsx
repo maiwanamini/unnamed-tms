@@ -1,16 +1,34 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import global from "../styles/global";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ThemedText } from "../components/ThemedText";
+import { ThemedButton } from "../components/ThemedButton";
 
 export default function Index() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text style={global.body}>Edit app/index.tsx to edit this screen.</Text>
-    </View>
+    <SafeAreaView style={global.pageWrap}>
+      {/* body */}
+      <View style={global.bodyWrap}>
+        <View style={global.contentWrap}>
+          <View style={global.textWrap}>
+            <ThemedText>Welcome to</ThemedText>
+            <ThemedText type="title">The Unnamed TMS</ThemedText>
+            <ThemedText style={global.faded}>
+              Your go-to app for truckers
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+
+      {/* footer */}
+      <View style={global.footerWrap}>
+        <View style={global.buttonWrap}>
+          <ThemedButton>Log in</ThemedButton>
+          <ThemedButton variant="twoLines">
+            By continuing you agree to the Terms of Service and Privacy Policy
+          </ThemedButton>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
