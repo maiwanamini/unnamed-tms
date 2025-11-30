@@ -2,15 +2,42 @@ import { StyleSheet } from "react-native";
 import colors from "../theme/colors";
 
 export default StyleSheet.create({
-  body: {
-    fontsize: 20,
-    color: colors.text,
+  // Layout
+  pageWrap: {
+    width: "100%",
+    alignItems: "stretch",
+    flex: 1,
+    paddingHorizontal: 16,
+    gap: 32,
   },
-  tag: {
-    backgroundColor: colors.successBackground,
-    color: colors.successForeground,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+  headerWrap: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
   },
+  bodyWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  footerWrap: {
+    gap: 8,
+  },
+  buttonWrap: {
+    gap: 8,
+  },
+  contentWrap: {
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  textWrap: {
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+
+  //
+  faded: { opacity: 0.6 },
 });
