@@ -18,7 +18,7 @@ export default function FiltersRow({ query, setQuery, statusFilter, setStatusFil
   const hasFilters = Boolean((query && query.toString().trim() !== '') || (statusFilter && statusFilter.length > 0));
 
   return (
-    <div className="filters-row" style={{ marginTop: 0, marginBottom: 0 }}>
+    <div className="filters-row flex flex-wrap gap-2 w-full items-end" style={{ marginTop: 0, marginBottom: 0 }}>
       <Filter label={"Search"}>
         <div className="search-box" style={{ width: 242 }}>
           <SearchIcon className="search-icon" />
@@ -27,14 +27,23 @@ export default function FiltersRow({ query, setQuery, statusFilter, setStatusFil
       </Filter>
       <div style={{ width: 1, height: 40, backgroundColor: "#e5e7eb", alignSelf: "flex-end" }}></div>
       <Filter label={"Choose Date"}>
-        <button className="filter"><span>All</span><KeyboardArrowDownIcon style={{ fontSize: 16, color: "#6b7280" }} /></button>
+        <button className="filter min-w-[120px] max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">
+          <span className="truncate">All</span>
+          <KeyboardArrowDownIcon className="shrink-0" style={{ fontSize: 16, color: "#6b7280" }} />
+        </button>
       </Filter>
       <StatusFilter statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
       <Filter label={"Client"}>
-        <button className="filter"><span>All</span><KeyboardArrowDownIcon style={{ fontSize: 16, color: "#6b7280" }} /></button>
+        <button className="filter min-w-[120px] max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">
+          <span className="truncate">All</span>
+          <KeyboardArrowDownIcon className="shrink-0" style={{ fontSize: 16, color: "#6b7280" }} />
+        </button>
       </Filter>
       <Filter label={"Truck"}>
-        <button className="filter"><span>All</span><KeyboardArrowDownIcon style={{ fontSize: 16, color: "#6b7280" }} /></button>
+        <button className="filter min-w-[120px] max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">
+          <span className="truncate">All</span>
+          <KeyboardArrowDownIcon className="shrink-0" style={{ fontSize: 16, color: "#6b7280" }} />
+        </button>
       </Filter>
       {hasFilters && (
         <Filter style={{ marginLeft: "auto" }}>

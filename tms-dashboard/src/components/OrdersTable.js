@@ -46,66 +46,77 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
     };
   }, [orders]);
 
-  // Use fixed pixel widths to prevent column shrinking and keep header/body in sync
-  const cols = '120px 200px 120px 160px 240px 240px 120px';
+  // Fixed pixel widths to prevent column shrinking and keep header/body in sync
+  const columnDefs = [
+    { key: "id", label: "ID", width: 120 },
+    { key: "client", label: "Client", width: 200 },
+    { key: "truck", label: "Truck", width: 120 },
+    { key: "driver", label: "Driver", width: 160 },
+    { key: "origin", label: "Origin", width: 240 },
+    { key: "destination", label: "Destination", width: 240 },
+    { key: "status", label: "Status", width: 120 },
+  ];
+
+  const getSlice = () => {
+    if (rowsPerPage === Infinity) return orders;
+    const start = page * rowsPerPage;
+    const end = Math.min(start + rowsPerPage, orders.length);
+    return orders.slice(start, end);
+  };
 
   return (
-    <div className="min-w-[1100px] w-full">
-      <div className="table-header">
-        <div className="orders-grid orders-header-grid" style={{ gridTemplateColumns: cols }}>
-          <div className="orders-cell orders-header">ID</div>
-          <div className="orders-cell orders-header">Client</div>
-          <div className="orders-cell orders-header">Truck</div>
-          <div className="orders-cell orders-header">Driver</div>
-          <div className="orders-cell orders-header">Origin</div>
-          <div className="orders-cell orders-header">Destination</div>
-          <div className="orders-cell orders-header">Status</div>
-        </div>
-      </div>
-
+    <div className="w-full">
+      {/* Vertical scroll container; the horizontal scroll comes from parent wrapper */}
       <div className="table-wrapper" ref={wrapperRef}>
-        <div className="orders-body">
-          {(() => {
-            let slice;
-            if (rowsPerPage === Infinity) {
-              slice = orders;
-            } else {
-              const start = page * rowsPerPage;
-              const end = Math.min(start + rowsPerPage, orders.length);
-              slice = orders.slice(start, end);
-            }
-            return slice.map((o) => (
-              <div
+        {/* Force a wider inner box so the wrapper shows a horizontal scrollbar when needed */}
+        <div className="min-w-[1250px] inline-block align-top">
+          <table className="orders-table w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+          <colgroup>
+            {columnDefs.map((c) => (
+              <col key={c.key} style={{ width: c.width }} />
+            ))}
+          </colgroup>
+          <thead className="sticky top-0 z-10 bg-white">
+            <tr>
+              {columnDefs.map((c) => (
+                <th key={c.key} style={{ textAlign: 'left', padding: '12px 8px', fontWeight: 600, fontSize: 13, color: '#0f172a', background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {getSlice().map((o) => (
+              <tr
                 key={o.id}
-                className={`orders-row ${selected?.id === o.id ? 'selected' : ''}`}
                 onClick={() => setSelected(o)}
-                style={{ cursor: 'pointer', gridTemplateColumns: cols }}
+                className={selected?.id === o.id ? 'selected' : ''}
+                style={{ cursor: 'pointer' }}
               >
-                <div className="orders-cell">{o.id}</div>
-                <div className="orders-cell">
+                <td style={{ padding: '12px 8px' }}>{o.id}</td>
+                <td style={{ padding: '12px 8px' }}>
                   <div>{o.client}</div>
                   <div style={{ color: '#9ca3af', fontSize: 12 }}>#Reference</div>
-                </div>
-                <div className="orders-cell">
+                </td>
+                <td style={{ padding: '12px 8px' }}>
                   <div>{o.truck}</div>
                   <div style={{ color: '#9ca3af', fontSize: 12 }}>Truck</div>
-                </div>
-                <div className="orders-cell">
+                </td>
+                <td style={{ padding: '12px 8px' }}>
                   <div>{o.driver}</div>
                   <div style={{ color: '#9ca3af', fontSize: 12 }}>Phone</div>
-                </div>
-                <div className="orders-cell">
+                </td>
+                <td style={{ padding: '12px 8px' }}>
                   <div>{o.origin}</div>
                   <div style={{ color: '#9ca3af', fontSize: 12 }}>Date</div>
-                </div>
-                <div className="orders-cell">
+                </td>
+                <td style={{ padding: '12px 8px' }}>
                   <div>{o.destination}</div>
                   <div style={{ color: '#9ca3af', fontSize: 12 }}>Date</div>
-                </div>
-                <div className="orders-cell"><StatusPill status={o.status} /></div>
-              </div>
-            ));
-          })()}
+                </td>
+                <td style={{ padding: '12px 8px' }}><StatusPill status={o.status} /></td>
+              </tr>
+            ))}
+          </tbody>
+          </table>
         </div>
       </div>
 

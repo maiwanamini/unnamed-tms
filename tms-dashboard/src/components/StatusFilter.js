@@ -57,9 +57,9 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
   return (
     <Filter label={label}>
       <div ref={statusRef} style={{ position: "relative" }}>
-        <button className="filter" onClick={() => setStatusOpen((v) => !v)}>
-          <span>{statusLabel}</span>
-          <KeyboardArrowDownIcon className={`status-chevron ${statusOpen ? 'open' : ''}`} style={{ fontSize: 16, color: "#6b7280" }} />
+        <button className="filter min-w-[120px] max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis" onClick={() => setStatusOpen((v) => !v)}>
+          <span className="truncate">{statusLabel}</span>
+          <KeyboardArrowDownIcon className={`status-chevron ${statusOpen ? 'open' : ''} shrink-0`} style={{ fontSize: 16, color: "#6b7280" }} />
         </button>
         {statusOpen && (
           <div className="status-dropdown">
