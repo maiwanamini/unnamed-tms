@@ -433,7 +433,7 @@ a {
 .card {
   background: #ffffff;
   padding: 10px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Remove horizontal padding for specific cards (used on Orders table) */
@@ -668,10 +668,13 @@ a {
 
 /* Detail panel */
 .detail-panel {
-  width: min(360px, 100%);
+  /* Fill the grid column; column defines fixed min/max width */
+  width: 100%;
+  min-width: 320px;
+  max-width: 380px;
   background: #ffffff;
   border-left: 1px solid #e5e7eb;
-  /* reduce bottom padding so the panel doesn't force extra page length */
+  /* keep tight padding to avoid visual whitespace at edges */
   padding: 16px 16px 24px 16px;
   position: sticky;
   top: 0;
@@ -679,6 +682,7 @@ a {
   overflow-y: auto;
   box-sizing: border-box;
   scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
+  z-index: 20; /* ensure panel overlays rows and UI during resize */
 }
 
 .detail-panel::after {
@@ -880,7 +884,7 @@ a {
 
 /* Prevent horizontal scroll on small screens or overflowed elements */
 html, body, #__next {
-  overflow-x: hidden;
+  overflow-x: visible;
   height: 100%;
 }
 

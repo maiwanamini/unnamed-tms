@@ -46,10 +46,11 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
     };
   }, [orders]);
 
-  const cols = '8% 12% 10% 12% 18% 18% 10%';
+  // Use fixed pixel widths to prevent column shrinking and keep header/body in sync
+  const cols = '120px 200px 120px 160px 240px 240px 120px';
 
   return (
-    <>
+    <div className="min-w-[1100px] w-full">
       <div className="table-header">
         <div className="orders-grid orders-header-grid" style={{ gridTemplateColumns: cols }}>
           <div className="orders-cell orders-header">ID</div>
@@ -115,6 +116,6 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
         setPage={setPage}
         total={orders.length}
       />
-    </>
+    </div>
   );
 }

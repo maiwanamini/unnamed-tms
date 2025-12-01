@@ -68,18 +68,42 @@ export default function Page() {
         <button className="btn-primary" style={{ width: 102, height: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 }}><AddIcon style={{ fontSize: 20 }} /><span style={{ fontWeight: 600, fontSize: 14 }}>NEW</span></button>
       </div>
 
-      <div className="dashboard-main">
-        <div style={{ flex: 1 }}>
+      {/* Main two-column grid: left table (flexible) + right detail (fixed range) */}
+      <div
+        className="dashboard-main"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,2fr) minmax(320px,380px)",
+          gap: 0,
+          alignItems: "start",
+        }}
+      >
+        {/* Left column: filters + horizontally scrollable table container */}
+        <div style={{ minWidth: 0 }}>
           <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
-            <FiltersRow query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+            {/* Responsive wrapper for filter controls to prevent cropping */}
+            <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
+              <FiltersRow
+                query={query}
+                setQuery={setQuery}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+              />
+            </div>
           </Card>
 
-          <Card className="card card-no-hpad">
-            <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
-          </Card>
+          {/* Horizontal scroll wrapper for the table header+body (synced) */}
+          <div className="min-w-0 overflow-x-auto" style={{ paddingTop: 0 }}>
+            <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0 }}>
+              <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
+            </Card>
+          </div>
         </div>
 
-        <DetailPanel selected={selected} />
+        {/* Right column: detail panel within fixed width constraints */}
+        <div style={{ width: "100%" }}>
+          <DetailPanel selected={selected} />
+        </div>
       </div>
     </div>
   );
