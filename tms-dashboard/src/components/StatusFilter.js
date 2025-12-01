@@ -73,8 +73,7 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
                   type="button"
                   className={`status-search-clear ${hasSelection ? 'active' : ''}`}
                   onClick={hasSelection ? () => { setStatusQuery(""); if (setStatusFilter) setStatusFilter([]); } : undefined}
-                  aria-label="Delete search"
-                  title="Clear"
+                  aria-label="Clear filter"
                   disabled={!hasSelection}
                 >
                   <DeleteIcon style={{ fontSize: 20 }} />
