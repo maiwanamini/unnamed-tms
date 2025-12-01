@@ -478,15 +478,13 @@ a {
   flex: 1 1 auto;
 }
 .card.card-no-hpad .table-wrapper {
-  /* subtract header + filters approximate height so table reaches bottom */
-    /* Reduce reserved space so footer sits lower and the scrollable area extends */
-    max-height: calc(var(--vh, 1vh) * 100 - 180px - var(--table-footer-height));
-  /* vertical scroll for rows; horizontal scroll for wide table */
+  /* Adjustable offset so footer sits higher above bottom of viewport. */
+  --orders-table-offset: 196px; /* increase this value to move footer further up */
+  max-height: calc(var(--vh, 1vh) * 100 - var(--orders-table-offset) - var(--table-footer-height));
   overflow-y: auto;
   overflow-x: auto;
   flex: 1 1 auto;
   position: relative;
-  /* Remove extra bottom padding now that footer is non-sticky */
   padding-bottom: 0;
 }
 
@@ -679,21 +677,18 @@ a {
 
 /* Detail panel */
 .detail-panel {
-  /* Fill the grid column; column defines fixed min/max width */
   width: 100%;
   min-width: 320px;
   max-width: 380px;
   background: #ffffff;
-  border-left: 1px solid #e5e7eb;
-  /* keep tight padding to avoid visual whitespace at edges */
   padding: 16px 16px 24px 16px;
+  box-sizing: border-box;
   position: sticky;
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
-  box-sizing: border-box;
-  scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
-  z-index: 20; /* ensure panel overlays rows and UI during resize */
+  overflow-x: hidden; /* prevent horizontal scroll; keep fixed width */
+  border-left: 1px solid #e5e7eb; /* restored separator to match other borders */
 }
 
 /* Native table styling for OrdersTable */
@@ -914,12 +909,10 @@ html, body, #__next {
 /* Detail panel divider used under the order number */
 .detail-divider {
   height: 1px;
-  width: calc(100% + 32px); /* span full panel width including 16px side padding */
-  margin-left: -16px; /* offset left so divider reaches panel edge */
-  margin-right: -16px; /* offset right so divider reaches panel edge */
+  width: 100%; /* stay within panel width to avoid overflow */
+  margin: 12px 0;
   display: block;
   background: #e5e7eb;
-  margin: 12px 0;
 }
 
 /* Footer under orders table (pagination / actions) */
@@ -929,7 +922,7 @@ html, body, #__next {
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0px 16px;
   gap: 12px;
   box-sizing: border-box;
   /* Footer stays in normal flow (non-sticky) */

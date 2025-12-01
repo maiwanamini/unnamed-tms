@@ -23,11 +23,12 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen`}>
         {/* Top-level layout: full height with sidebar + main content */}
-        <div className="flex h-full">
+        <div className="flex h-full overflow-hidden">
           <Sidebar />
-          {/* Main content column: flex-1 with internal scroll area */}
-          <main className="flex flex-col flex-1 min-h-0 bg-[var(--background)]">
-            <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Main content column: disable outer scroll; children manage internal scroll */}
+          <main className="flex flex-col flex-1 min-h-0 bg-[var(--background)] overflow-hidden">
+            {/* Remove this overflow-y-auto to prevent page-level scroll */}
+            <div className="flex-1 min-h-0 overflow-hidden">
               {children}
             </div>
           </main>
