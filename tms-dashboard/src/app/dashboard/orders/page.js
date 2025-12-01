@@ -92,12 +92,10 @@ export default function Page() {
             </div>
           </Card>
 
-          {/* Horizontal scroll wrapper for the table header+body (synced) */}
-          <div className="min-w-0 overflow-x-auto" style={{ paddingTop: 0 }}>
-            <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0 }}>
-              <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
-            </Card>
-          </div>
+          {/* Table card; the inner table wrapper handles horizontal scroll */}
+          <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0 }}>
+            <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
+          </Card>
         </div>
 
         {/* Right column: detail panel within fixed width constraints */}

@@ -21,11 +21,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen`}>
+        {/* Top-level layout: full height with sidebar + main content */}
+        <div className="flex h-full">
           <Sidebar />
-          <main style={{ flex: 1, background: "var(--background)", display: "flex", flexDirection: "column", minHeight: "100vh", overflow: "hidden" }}>
-            {children}
+          {/* Main content column: flex-1 with internal scroll area */}
+          <main className="flex flex-col flex-1 min-h-0 bg-[var(--background)]">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {children}
+            </div>
           </main>
         </div>
 

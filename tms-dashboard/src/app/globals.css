@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -192,9 +194,11 @@ a {
 
 .filters-row {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap; /* allow wrapping on smaller widths */
+  gap: 8px 8px; /* gap-x-2 gap-y-2 equivalent */
   align-items: flex-end;
   margin-bottom: 12px;
+  width: 100%;
 }
 .filters-row .filter-wrapper {
   display: flex;
@@ -421,10 +425,17 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-width: 140px;
+  min-width: 120px; /* min-w-[120px] */
+  max-width: 220px; /* max-w-[220px] */
   font-size: 14px;
   height: 40px;
 }
+.filters-row .filter span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filters-row .filter svg { flex-shrink: 0; }
 .filters-row .search {
   width: 320px;
 }
@@ -440,7 +451,7 @@ a {
 .card.card-no-hpad {
   /* keep vertical padding, remove horizontal padding */
   padding-top: 0;
-  padding-bottom: 10px;
+  padding-bottom: 0; /* remove extra bottom spacing under the table */
   padding-left: 0;
   padding-right: 0;
   display: flex;
@@ -468,15 +479,15 @@ a {
 }
 .card.card-no-hpad .table-wrapper {
   /* subtract header + filters approximate height so table reaches bottom */
-    /* aggressive sizing: reserve more vertical space so empty white area is removed
-      (Option A). This reduces visible rows before scrolling but fits the footer/panel. */
-    /* Reduce the previously over-reserved space so the footer no longer leaves
-       a large empty gap beneath the page. We keep a modest subtraction to
-       account for header + filters, then subtract the footer height. */
-    max-height: calc(var(--vh, 1vh) * 100 - 232px - var(--table-footer-height));
+    /* Reduce reserved space so footer sits lower and the scrollable area extends */
+    max-height: calc(var(--vh, 1vh) * 100 - 180px - var(--table-footer-height));
+  /* vertical scroll for rows; horizontal scroll for wide table */
   overflow-y: auto;
+  overflow-x: auto;
   flex: 1 1 auto;
   position: relative;
+  /* Remove extra bottom padding now that footer is non-sticky */
+  padding-bottom: 0;
 }
 
 /* Scrollbar styling for the orders table scroll area */
@@ -685,6 +696,13 @@ a {
   z-index: 20; /* ensure panel overlays rows and UI during resize */
 }
 
+/* Native table styling for OrdersTable */
+.orders-table th,
+.orders-table td { vertical-align: middle; }
+.orders-table tbody tr:nth-child(even) { background: #f3f4f6; }
+.orders-table tbody tr:hover { background: #eef2f7; }
+.orders-table tbody tr.selected { background: #eef2f7; }
+
 .detail-panel::after {
   content: "";
   display: block;
@@ -884,7 +902,7 @@ a {
 
 /* Prevent horizontal scroll on small screens or overflowed elements */
 html, body, #__next {
-  overflow-x: visible;
+  overflow-x: hidden;
   height: 100%;
 }
 
@@ -914,11 +932,9 @@ html, body, #__next {
   padding: 0 16px;
   gap: 12px;
   box-sizing: border-box;
-  /* Keep the footer in normal flow below the scrollable table so it's
-     always fully visible. Making it non-sticky prevents it from being
-     clipped by scrolling containers. */
+  /* Footer stays in normal flow (non-sticky) */
   position: relative;
-  z-index: 8; /* sit above rows but not sticky */
+  z-index: 8; /* above rows but not sticky */
 }
 .table-footer .rows-select { display:flex; align-items:center; gap:8px }
 .table-footer .page-info { font-size: 13px; color: #6b7280 }
