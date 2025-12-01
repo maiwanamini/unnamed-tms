@@ -3,20 +3,19 @@
 import { useState } from "react";
 import Filter from "@/components/Filter";
 import SearchIcon from "@mui/icons-material/Search";
-import SettingsIcon from "@mui/icons-material/Settings";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import StatusFilter from '@/components/StatusFilter';
 
 const STATUSES = ["Moving", "Pending", "Completed", "Canceled"];
 
 export default function FiltersRow({ query, setQuery, statusFilter, setStatusFilter }) {
-
   function clearFilters() {
-    setQuery("");
+    if (setQuery) setQuery("");
     if (setStatusFilter) setStatusFilter([]);
   }
 
   const statusLabel = !statusFilter || statusFilter.length === 0 ? "All" : statusFilter.join(", ");
+  const hasFilters = Boolean((query && query.toString().trim() !== '') || (statusFilter && statusFilter.length > 0));
 
   return (
     <div className="filters-row" style={{ marginTop: 0, marginBottom: 0 }}>
@@ -37,11 +36,19 @@ export default function FiltersRow({ query, setQuery, statusFilter, setStatusFil
       <Filter label={"Truck"}>
         <button className="filter"><span>All</span><KeyboardArrowDownIcon style={{ fontSize: 16, color: "#6b7280" }} /></button>
       </Filter>
-      <Filter style={{ marginLeft: "auto" }}>
-        <div style={{ height: 40, display: "flex", alignItems: "center", color: "#6b7280", fontSize: 14, gap: 6, cursor: "pointer" }} onClick={clearFilters}>
-          CLEAR FILTERS <SettingsIcon style={{ fontSize: 18 }} />
-        </div>
-      </Filter>
+      {hasFilters && (
+        <Filter style={{ marginLeft: "auto" }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={clearFilters}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') clearFilters(); }}
+            style={{ height: 40, display: "flex", alignItems: "center", color: "#6b7280", fontSize: 14, gap: 6, cursor: "pointer", fontWeight: 700 }}
+          >
+            CLEAR FILTERS
+          </div>
+        </Filter>
+      )}
     </div>
   );
 }

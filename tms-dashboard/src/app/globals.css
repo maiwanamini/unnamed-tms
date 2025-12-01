@@ -2,7 +2,12 @@
   --background: #ffffff;
   --foreground: #171717;
   --primary-blue: #2563eb;
+  --scrollbar-width: 12px;
+  --scrollbar-thumb: rgba(2,6,23,0.08);
+  --scrollbar-track: transparent;
+  --table-footer-height: 56px;
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -206,7 +211,7 @@ a {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12);
   padding: 12px;
   z-index: 1000;
   box-sizing: border-box;
@@ -463,7 +468,12 @@ a {
 }
 .card.card-no-hpad .table-wrapper {
   /* subtract header + filters approximate height so table reaches bottom */
-  max-height: calc(var(--vh, 1vh) * 100 - 180px);
+    /* aggressive sizing: reserve more vertical space so empty white area is removed
+      (Option A). This reduces visible rows before scrolling but fits the footer/panel. */
+    /* Reduce the previously over-reserved space so the footer no longer leaves
+       a large empty gap beneath the page. We keep a modest subtraction to
+       account for header + filters, then subtract the footer height. */
+    max-height: calc(var(--vh, 1vh) * 100 - 232px - var(--table-footer-height));
   overflow-y: auto;
   flex: 1 1 auto;
   position: relative;
@@ -475,26 +485,46 @@ a {
      edges when no vertical scrollbar is present. `has-scrollbar` will
      enable the stable gutter when needed. */
   scrollbar-gutter: auto;
-  scrollbar-width: auto;
-  scrollbar-color: rgba(0,0,0,0.12) transparent;
+  scrollbar-width: normal;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-/* WebKit (Chromium, Safari) custom width */
 .card.card-no-hpad .table-wrapper::-webkit-scrollbar {
-  width: 16px;
-  height: 16px;
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
 }
 .card.card-no-hpad .table-wrapper::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 .card.card-no-hpad .table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.12);
+  background: var(--scrollbar-thumb);
   border-radius: 8px;
-  border: 4px solid transparent; /* provide padding so thumb sits inside track */
+  border: 3px solid transparent; /* provide padding so thumb sits inside track */
   background-clip: padding-box;
 }
-.card.card-no-hpad .table-wrapper .table {
-  margin: 0; /* ensure table aligns with wrapper edges */
+
+/* Unified scrollbar styles for other scrollable elements (WebKit browsers) */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox scrollbar settings */
+* {
+  scrollbar-width: normal;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.card.card-no-hpad .table-wrapper .orders-body {
+  margin: 0; /* ensure body aligns with wrapper edges */
 }
 
 /* When a scrollbar is present and we have detected it, reserve the
@@ -507,15 +537,14 @@ a {
    add an extra 16px right padding to the header table so the headings
    visually align with the scrollable body columns. Applied in the
    card context to avoid affecting other table headers. */
-.card.card-no-hpad.has-scrollbar .table-header .table {
-  /* Keep the padding inside the header table's box so the
-     card border line remains visible. Using border-box ensures the
-     padding doesn't push outside the header container. */
-  /* Reduce the header table total width by the scrollbar width so
-     the header columns line up with the body table when the body
-     shows a vertical scrollbar. This is more reliable than adding
-     padding on the table element for table-based layouts. */
-  width: calc(100% - 16px);
+.card.card-no-hpad.has-scrollbar .table-header .orders-grid {
+  /* Keep the padding inside the header grid's box so the
+    card border line remains visible. Using border-box ensures the
+    padding doesn't push outside the header container. */
+  /* Reduce the header grid total width by the scrollbar width so
+    the header columns line up with the body when the body shows a
+    vertical scrollbar. JS toggles `.has-scrollbar` on the card. */
+  width: calc(100% - var(--scrollbar-width));
   box-sizing: border-box;
 }
 
@@ -530,12 +559,12 @@ a {
 /* When there is no scrollbar, ensure both header and body tables
    occupy the full width so columns are flush with the card content
    area (no extra right gap). */
-.card.card-no-hpad:not(.has-scrollbar) .table-header .table {
+.card.card-no-hpad:not(.has-scrollbar) .table-header .orders-grid {
   width: 100%;
   box-sizing: border-box;
   padding-right: 0;
 }
-.card.card-no-hpad:not(.has-scrollbar) .table-wrapper .table {
+.card.card-no-hpad:not(.has-scrollbar) .table-wrapper .orders-body {
   width: 100%;
   box-sizing: border-box;
 }
@@ -563,6 +592,32 @@ a {
 }
 .table-header .table { width: 100%; border-collapse: collapse; }
 .table-header .table th { padding: 12px 12px; font-weight: 600; font-size: 13px; text-align: left; border-bottom: none; background: #ffffff; }
+
+/* Orders grid-based layout (replaces legacy table markup) */
+.table-header { background: #ffffff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 6; }
+.orders-grid { display: grid; width: 100%; align-items: center; }
+.orders-grid { display: grid; width: 100%; align-items: center; column-gap: 12px; }
+.orders-header-grid .orders-header { padding: 12px 8px; font-weight: 600; font-size: 13px; color: #0f172a; }
+.orders-body { display: block; }
+.orders-row { display: grid; align-items: center; gap: 12px; padding: 12px 12px; border-bottom: none; }
+.orders-row:hover { background: #eef2f7; }
+.orders-row.selected { background: #eef2f7; }
+
+/* Zebra striping for orders list: even rows get a subtle background */
+.orders-body .orders-row:nth-child(even) {
+  background: #f3f4f6;
+}
+
+/* Ensure selected state overrides zebra */
+.orders-body .orders-row.selected {
+  background: #eef2f7;
+}
+
+/* Make hover take precedence for all rows (including zebra ones) */
+.orders-body .orders-row:hover {
+  background: #eef2f7;
+}
+.orders-cell { padding: 0 8px; font-size: 14px; display: flex; flex-direction: column; justify-content: center; }
 .table th {
   font-weight: 600;
   font-size: 13px;
@@ -576,13 +631,23 @@ a {
 
 /* Status pills */
 .status-pill {
-  padding: 6px 10px;
+  /* Canonical status pill design: fixed horizontal padding so the
+     background box doesn't collapse/resize when the page width changes.
+     Keep this pattern as the standard for future status-pill variants. */
+  padding: 6px 8px; /* 6px vertical, 8px horizontal */
   border-radius: 4px;
   font-weight: 600;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap; /* prevent wrapping that could change width */
+  box-sizing: border-box;
+  /* Prevent flex containers (like .orders-cell) from stretching the pill to 100% width */
+  flex: 0 0 auto; /* avoid flex children stretching the pill */
+  align-self: center; /* do not stretch inside vertical/column flex parents */
+  width: auto !important;
+  max-width: none !important;
 }
 .status-moving { background: #e6f3ff; color: #075985; }
 .status-moving .status-icon { color: #075985; }
@@ -603,21 +668,23 @@ a {
 
 /* Detail panel */
 .detail-panel {
-  width: 360px;
+  width: min(360px, 100%);
   background: #ffffff;
   border-left: 1px solid #e5e7eb;
-  padding: 16px 16px 88px 16px; /* extra bottom padding so last card isn't cut off by scrollbars */
+  /* reduce bottom padding so the panel doesn't force extra page length */
+  padding: 16px 16px 24px 16px;
   position: sticky;
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  box-sizing: border-box;
   scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
 }
 
 .detail-panel::after {
   content: "";
   display: block;
-  height: 28px; /* extra spacer to ensure last card can scroll fully above bottom */
+  height: 8px; /* small spacer only; avoid large extra height */
   pointer-events: none;
 }
 .detail-panel .header {
@@ -636,9 +703,7 @@ a {
   margin-bottom: 16px;
   overflow: visible; /* avoid clipping content inside the card */
 }
-.stop-left-border {
-  border-left: 6px solid #10b981; padding-left: 12px; background: white; border-radius: 4px; padding: 12px;
-}
+
 
 .stop-card .badge {
   display: inline-flex;
@@ -708,17 +773,6 @@ a {
 .stop-flag.completed .flag-text { color: #065f46; }
 .stop-flag.moving .flag-text { color: #075985; }
 .stop-flag.pending .flag-text { color: #92400e; }
-.stop-number { display: none; }
-.stop-status-inline {
-  position: absolute;
-  right: 14px;
-  top: 12px;
-  z-index: 3;
-}
-.stop-status-inline .status-pill {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  border-radius: 10px;
-}
 .stop-card .stop-content { margin-left: 0; }
 .stop-card .stop-title { font-weight: 700; color: #111827; margin-bottom: 8px; font-size:14px }
 .stop-card .stop-sub { color:#6b7280; font-size:12px; margin-bottom: 8px }
@@ -755,9 +809,72 @@ a {
   cursor: pointer;
 }
 
-.plate-actions { display:flex; gap:8px }
-.small-ghost { background:#eef2ff; border: none; padding:8px; border-radius:6px; cursor:pointer }
+.plate-actions { display: flex; gap: 8px; }
+
+/* Minimal, reusable icon button used for plate actions */
+.small-ghost {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.small-ghost svg { width: 20px; height: 20px; display: block; }
+
+/* Variants: color by intent (inherit color into svg via `color`) */
+.small-ghost.change-truck { background: #e6f3ff; color: #075985; }
+.small-ghost.unassign-truck { background: #fff1f2; color: #9f1239; }
+
+.small-ghost:hover { opacity: 0.96; }
+
 .detail-list strong { display:inline-block; width: 80px; }
+
+/* Simple tooltip for icon buttons using data-tooltip attribute */
+.small-ghost[data-tooltip] {
+  position: relative;
+  z-index: 999999; /* ensure tooltip container sits above scrollbars and other UI chrome */
+}
+.small-ghost[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(17,24,39,0.95);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .12s ease, transform .12s ease;
+  z-index: 999999; /* make tooltip overlay high enough to escape native scrollbars */
+}
+.small-ghost[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.small-ghost[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(17,24,39,0.95);
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 999999;
+}
+.small-ghost[data-tooltip]:hover::before { opacity: 1; }
 
 
 
@@ -771,5 +888,98 @@ html, body, #__next {
 .app-root {
   height: calc(var(--vh, 1vh) * 100);
 }
+
+/* Detail panel divider used under the order number */
+.detail-divider {
+  height: 1px;
+  width: calc(100% + 32px); /* span full panel width including 16px side padding */
+  margin-left: -16px; /* offset left so divider reaches panel edge */
+  margin-right: -16px; /* offset right so divider reaches panel edge */
+  display: block;
+  background: #e5e7eb;
+  margin: 12px 0;
+}
+
+/* Footer under orders table (pagination / actions) */
+.table-footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  box-sizing: border-box;
+  /* Keep the footer in normal flow below the scrollable table so it's
+     always fully visible. Making it non-sticky prevents it from being
+     clipped by scrolling containers. */
+  position: relative;
+  z-index: 8; /* sit above rows but not sticky */
+}
+.table-footer .rows-select { display:flex; align-items:center; gap:8px }
+.table-footer .page-info { font-size: 13px; color: #6b7280 }
+.pager-buttons .btn-ghost { height: 36px; padding: 6px 12px; border-radius: 6px; background: transparent; border: 1px solid #e5e7eb; color: #374151 }
+.pager-buttons .btn-ghost:disabled { opacity: 0.5; cursor: default }
+
+/* Custom select (dropup) used in the footer */
+.rows-select { position: relative; display: flex; align-items: center; }
+.custom-select { position: relative; }
+.custom-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111827;
+}
+.custom-select-trigger:focus { outline: none; box-shadow: 0 6px 18px rgba(37,99,235,0.08); }
+.custom-select-caret {
+  font-size: 12px;
+  /* make rotation instant */
+  transition: none;
+  display: inline-flex;
+  vertical-align: middle;
+  transform-origin: center;
+  transform: rotate(0deg);
+  /* muted grey to match other chevrons */
+  color: #6b7280;
+}
+.custom-select-caret svg { display: inline-block; width: 14px; height: 14px; }
+.custom-select.open .custom-select-caret { transform: rotate(180deg); }
+.custom-select-menu {
+  position: absolute;
+  bottom: calc(100% + 8px); /* dropup: show above the trigger */
+  left: 0;
+  min-width: 160px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12);
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1200;
+}
+.custom-select-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #111827;
+  font-size: 14px;
+}
+.custom-select-item:hover { background: #f3f4f6; }
+.custom-select-item.active {
+  background: #eef2ff; /* soft blue highlight */
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* small visual tweak so the active item looks like the provided image */
+.custom-select-item.active { background: linear-gradient(180deg,#eef6ff,#e6f0ff); }
 
 

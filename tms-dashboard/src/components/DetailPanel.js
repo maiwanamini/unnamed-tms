@@ -30,37 +30,37 @@ export default function DetailPanel({ selected }) {
       <div className="header">
         <div>
           <h3 style={{ margin: 0, fontSize: 22 }}>{selected?.id || 'O-01'}</h3>
-          <p style={{ marginTop: 6 }}>{selected?.client || 'Client name'}</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-          <StatusPill status={selected?.status || 'Moving'} />
         </div>
       </div>
+
+    <div className="detail-divider" style={{ height: 1, width: '100%', background: '#e5e7eb', marginTop: 16, marginBottom: 16 }} />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
-          <div style={{ color: "#6b7280", fontSize: 13 }}>Plate</div>
-          <div style={{ fontWeight: 600, marginTop: 6 }}>Truck</div>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>Truck</div>
+          <div style={{ color: "#6b7280", fontSize: 14 }}>Plate</div>
         </div>
         <div className="plate-actions">
-          <button className="small-ghost"><SwapHorizIcon /></button>
-          <button className="small-ghost"><CloseIcon /></button>
+          <button className="small-ghost change-truck" data-tooltip="Change truck" aria-label="Change truck"><SwapHorizIcon /></button>
+          <button className="small-ghost unassign-truck" data-tooltip="Unassign truck" aria-label="Unassign truck"><CloseIcon /></button>
         </div>
       </div>
 
-      <div style={{ marginTop: 6, marginBottom: 12 }}>
+      <div>
+        <button className="assign-btn">ASSIGN TRAILER</button>
+      </div>
+
+            <div style={{ marginTop: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 44, height: 44, borderRadius: 99, background: "#111827", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><PersonIcon /></div>
           <div>
-            <div style={{ fontWeight: 600 }}>Driver</div>
-            <div style={{ color: "#6b7280", fontSize: 13 }}>Phone</div>
+            <div style={{ fontWeight: 600, fontSize: 1 }}>Driver</div>
+            <div style={{ color: "#6b7280", fontSize: 14 }}>Phone</div>
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <button className="assign-btn">ASSIGN TRAILER</button>
-      </div>
+      <div className="detail-divider" style={{ height: 1, width: '100%', background: '#e5e7eb', marginTop: 16, marginBottom: 16 }} />
 
       <h4 style={{ marginTop: 8, marginBottom: 8 }}>Stops</h4>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
