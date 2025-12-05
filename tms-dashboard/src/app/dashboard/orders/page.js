@@ -59,7 +59,7 @@ export default function Page() {
   });
 
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, padding: 16, gap: 8, border: "none", borderBottom: "1px solid #e5e7eb" }}>
         <div className="page-header">
           <h2>Orders</h2>
@@ -76,10 +76,13 @@ export default function Page() {
           gridTemplateColumns: "minmax(0,2fr) minmax(320px,380px)",
           gap: 0,
           alignItems: "start",
+          height: '100%',
+          minHeight: 0,
+          overflow: 'hidden'
         }}
       >
         {/* Left column: filters + horizontally scrollable table container */}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
             {/* Responsive wrapper for filter controls to prevent cropping */}
             <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
@@ -93,13 +96,13 @@ export default function Page() {
           </Card>
 
           {/* Table card; the inner table wrapper handles horizontal scroll */}
-          <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0 }}>
+          <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0, display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}>
             <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
           </Card>
         </div>
 
         {/* Right column: detail panel within fixed width constraints */}
-        <div style={{ width: "100%" }}>
+        <div style={{ width: "100%", height: '100%', minHeight: 0, overflow: 'hidden' }}>
           <DetailPanel selected={selected} />
         </div>
       </div>

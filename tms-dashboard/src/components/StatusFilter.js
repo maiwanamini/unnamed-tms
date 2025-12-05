@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from 'react-dom';
 import Filter from "@/components/Filter";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -17,9 +18,26 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
   const [statusQuery, setStatusQuery] = useState("");
 
   const statusRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+
+  // Recalculate dropdown position relative to viewport (for portal)
+  function updatePosition() {
+    if (!statusRef.current) return;
+    const trigger = statusRef.current.querySelector('button.filter');
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + 8 + window.scrollY, // 8px gap below button
+      left: rect.left + window.scrollX,
+      width: rect.width
+    });
+  }
 
   useEffect(() => {
     function handleDoc(e) {
+      // If click happens inside the portaled dropdown, do not close
+      const inDropdown = e.target && typeof e.target.closest === 'function' && e.target.closest('.status-dropdown');
+      if (inDropdown) return;
       if (!statusRef.current) return;
       if (!statusRef.current.contains(e.target)) {
         setStatusOpen(false);
@@ -33,13 +51,23 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
     document.addEventListener("mousedown", handleDoc);
     document.addEventListener("touchstart", handleDoc);
     document.addEventListener("keydown", handleKey);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
 
     return () => {
       document.removeEventListener("mousedown", handleDoc);
       document.removeEventListener("touchstart", handleDoc);
       document.removeEventListener("keydown", handleKey);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, []);
+
+  useEffect(() => {
+    if (statusOpen) {
+      updatePosition();
+    }
+  }, [statusOpen]);
 
   function toggleStatus(s) {
     if (!setStatusFilter) return;
@@ -56,13 +84,13 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
 
   return (
     <Filter label={label}>
-      <div ref={statusRef} style={{ position: "relative" }}>
+      <div ref={statusRef} className="status-filter-wrapper">
         <button className="filter min-w-[120px] max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis" onClick={() => setStatusOpen((v) => !v)}>
           <span className="truncate">{statusLabel}</span>
           <KeyboardArrowDownIcon className={`status-chevron ${statusOpen ? 'open' : ''} shrink-0`} style={{ fontSize: 16, color: "#6b7280" }} />
         </button>
-        {statusOpen && (
-          <div className="status-dropdown">
+        {statusOpen && createPortal(
+          <div className="status-dropdown" style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, minWidth: 280, zIndex: 9999 }}>
             <div className="status-list">
               <div className="status-search" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div className="search-box status-search-box" style={{ flex: 1 }}>
@@ -72,7 +100,7 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
                 <button
                   type="button"
                   className={`status-search-clear ${hasSelection ? 'active' : ''}`}
-                  onClick={hasSelection ? () => { setStatusQuery(""); if (setStatusFilter) setStatusFilter([]); } : undefined}
+                  onClick={hasSelection ? () => { setStatusQuery(''); if (setStatusFilter) setStatusFilter([]); } : undefined}
                   aria-label="Clear filter"
                   disabled={!hasSelection}
                 >
@@ -106,8 +134,8 @@ export default function StatusFilter({ statusFilter, setStatusFilter, label = "S
                 );
               })}
             </div>
-          </div>
-        )}
+          </div>, document.body)
+        }
       </div>
     </Filter>
   );

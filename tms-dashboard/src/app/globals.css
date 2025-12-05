@@ -478,15 +478,12 @@ a {
   flex: 1 1 auto;
 }
 .card.card-no-hpad .table-wrapper {
-  /* subtract header + filters approximate height so table reaches bottom */
-    /* Reduce reserved space so footer sits lower and the scrollable area extends */
-    max-height: calc(var(--vh, 1vh) * 100 - 180px - var(--table-footer-height));
-  /* vertical scroll for rows; horizontal scroll for wide table */
+  /* Fill remaining height and scroll internally (vertical + horizontal) */
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: auto;
-  flex: 1 1 auto;
   position: relative;
-  /* Remove extra bottom padding now that footer is non-sticky */
   padding-bottom: 0;
 }
 
@@ -686,17 +683,21 @@ a {
   background: #ffffff;
   border-left: 1px solid #e5e7eb;
   /* keep tight padding to avoid visual whitespace at edges */
-  padding: 16px 16px 24px 16px;
+  padding: 16px 16px 16px 16px;
   position: sticky;
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden; /* prevent horizontal scrollbar inside panel */
   box-sizing: border-box;
   scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
   z-index: 20; /* ensure panel overlays rows and UI during resize */
 }
 
 /* Native table styling for OrdersTable */
+.orders-table { font-size: 13px; }
+.orders-table th { font-size: 13px; }
+.orders-table td { font-size: 13px; }
 .orders-table th,
 .orders-table td { vertical-align: middle; }
 .orders-table tbody tr:nth-child(even) { background: #f3f4f6; }
@@ -902,8 +903,7 @@ a {
 
 /* Prevent horizontal scroll on small screens or overflowed elements */
 html, body, #__next {
-  overflow-x: hidden;
-  height: 100%;
+  /* No page-level overflow locks here; managed in layout containers */
 }
 
 /* Use runtime --vh to avoid mobile browser 100vh issues */
