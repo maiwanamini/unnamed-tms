@@ -481,9 +481,11 @@ a {
   /* Adjustable offset so footer sits higher above bottom of viewport. */
   --orders-table-offset: 196px; /* increase this value to move footer further up */
   max-height: calc(var(--vh, 1vh) * 100 - var(--orders-table-offset) - var(--table-footer-height));
+  /* Fill remaining height and scroll internally (vertical + horizontal) */
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: auto;
-  flex: 1 1 auto;
   position: relative;
   padding-bottom: 0;
 }
@@ -715,6 +717,9 @@ a {
   background: #ffffff;
   padding: 16px 16px 24px 16px;
   box-sizing: border-box;
+  border-left: 1px solid #e5e7eb;
+  /* keep tight padding to avoid visual whitespace at edges */
+  padding: 16px 16px 16px 16px;
   position: sticky;
   top: 0;
   max-height: 100vh;
@@ -725,9 +730,16 @@ a {
   scrollbar-gutter: stable;
   padding-right: calc(16px + var(--scrollbar-width));
   padding-left: calc(16px + var(--scrollbar-width)); /* keep left/right spacing visually equal */
+  overflow-x: hidden; /* prevent horizontal scrollbar inside panel */
+  box-sizing: border-box;
+  scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
+  z-index: 20; /* ensure panel overlays rows and UI during resize */
 }
 
 /* Native table styling for OrdersTable */
+.orders-table { font-size: 13px; }
+.orders-table th { font-size: 13px; }
+.orders-table td { font-size: 13px; }
 .orders-table th,
 .orders-table td { vertical-align: middle; }
 .orders-table tbody tr:nth-child(even) { background: #f3f4f6; }
@@ -936,8 +948,7 @@ a {
 
 /* Prevent horizontal scroll on small screens or overflowed elements */
 html, body, #__next {
-  overflow-x: hidden;
-  height: 100%;
+  /* No page-level overflow locks here; managed in layout containers */
 }
 
 /* Use runtime --vh to avoid mobile browser 100vh issues */
