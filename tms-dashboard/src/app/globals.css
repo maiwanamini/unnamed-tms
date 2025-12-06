@@ -214,7 +214,7 @@ a {
   left: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 4px;
   box-shadow: 0 8px 24px rgba(2,6,23,0.12);
   padding: 12px;
   z-index: 1000;
@@ -332,7 +332,7 @@ a {
   background: rgba(17,24,39,0.95);
   color: #fff;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 12px;
   white-space: nowrap;
   opacity: 0;
@@ -365,7 +365,7 @@ a {
   width: 18px;
   height: 18px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   display: inline-block;
   vertical-align: middle;
@@ -478,6 +478,9 @@ a {
   flex: 1 1 auto;
 }
 .card.card-no-hpad .table-wrapper {
+  /* Adjustable offset so footer sits higher above bottom of viewport. */
+  --orders-table-offset: 196px; /* increase this value to move footer further up */
+  max-height: calc(var(--vh, 1vh) * 100 - var(--orders-table-offset) - var(--table-footer-height));
   /* Fill remaining height and scroll internally (vertical + horizontal) */
   flex: 1 1 0;
   min-height: 0;
@@ -657,6 +660,38 @@ a {
   width: auto !important;
   max-width: none !important;
 }
+.route-pill {
+  /* Match status pill exact vertical rhythm and height */
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-self: center;
+  /* Use inner border line instead of outer border */
+  border: none;
+  box-shadow: inset 0 0 0 1px #e5e7eb;
+  color: #111827;
+  line-height: 1; /* match status text line-height */
+}
+.route-pill .route-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px; /* match .status-icon size */
+  color: #6b7280; /* muted icon color for contrast */
+}
+.route-pill .route-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1;
+}
 .status-moving { background: #e6f3ff; color: #075985; }
 .status-moving .status-icon { color: #075985; }
 .status-pending { background: #fff6e6; color: #92400e; }
@@ -676,11 +711,12 @@ a {
 
 /* Detail panel */
 .detail-panel {
-  /* Fill the grid column; column defines fixed min/max width */
   width: 100%;
   min-width: 320px;
   max-width: 380px;
   background: #ffffff;
+  padding: 16px 16px 24px 16px;
+  box-sizing: border-box;
   border-left: 1px solid #e5e7eb;
   /* keep tight padding to avoid visual whitespace at edges */
   padding: 16px 16px 16px 16px;
@@ -688,6 +724,12 @@ a {
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden; /* prevent horizontal scroll; keep fixed width */
+  border-left: 1px solid #e5e7eb; /* restored separator to match other borders */
+  /* Reserve a small gutter so content doesn't sit under the vertical scrollbar */
+  scrollbar-gutter: stable;
+  padding-right: calc(16px + var(--scrollbar-width));
+  padding-left: calc(16px + var(--scrollbar-width)); /* keep left/right spacing visually equal */
   overflow-x: hidden; /* prevent horizontal scrollbar inside panel */
   box-sizing: border-box;
   scrollbar-gutter: stable; /* reserve space for scrollbar to avoid layout shift */
@@ -715,15 +757,16 @@ a {
 }
 .detail-panel h3 { margin:0; }
 .detail-panel p { margin:0; color:#6b7280; font-size:13px; }
+.detail-panel h4 { font-weight: 700; }
 
 .stop-card {
   position: relative;
   background: #ffffff;
   border: 1px solid #eef2f6;
-  border-radius: 12px;
+  border-radius: 4px;
   /* left padding = flag width (30px) + desired content padding (16px) = 46px */
   padding: 16px 16px 16px 46px;
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* harmonize with arrow spacing for even rhythm */
   overflow: visible; /* avoid clipping content inside the card */
 }
 
@@ -733,51 +776,53 @@ a {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-weight: 700;
   font-size: 12px;
-  margin-bottom: 8px; /* reduced spacing */
+  margin-bottom: 4px; /* tighter spacing */
 }
 .stop-flag {
   position: absolute;
-  left: 0; /* render inside the card */
+  left: 0;
   top: 0;
-  width: 30px; /* narrower flag */
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-  overflow: hidden; /* clip flag contents to rounded edges */
-  height: 100%;
+  width: 30px; /* exact width */
+  height: 100%; /* full card height */
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start; /* start stack, control with flex + auto margins */
-  align-items: center; /* center contents horizontally */
-  writing-mode: vertical-rl;
-  color: white;
+  flex-direction: column; /* number → text → icon */
+  align-items: center; /* center horizontally */
+  justify-content: flex-start; /* start at top */
+  /* keep text horizontal; no vertical writing-mode */
+  color: #111827; /* dark text */
   font-weight: 700;
   font-size: 12px;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); /* subtle inner separation */
-  padding-top: 2px; /* flush number to top */
-  padding-bottom: 6px; /* slight room for bottom icon */
+  overflow: visible; /* avoid clipping */
+  padding-top: 16px; /* requested inset spacing */
+  padding-bottom: 16px; /* requested inset spacing */
 }
 .stop-flag .flag-number {
-  writing-mode: horizontal-tb;
+  /* horizontal number at top */
   font-size: 13px;
-  color: #ffffff;
+  color: #111827;
   font-weight: 700;
-  margin-bottom: 4px; /* slight gap below number */
+  margin-bottom: 4px;
   display: block;
-  order: 0; /* ensure number is first */
+  order: 0;
 }
 .stop-flag .flag-text {
-  writing-mode: vertical-rl;
+  /* horizontal middle text */
+  writing-mode: horizontal-tb;
   font-weight: 700;
   font-size: 12px;
-  display: flex; /* allow centering within available space */
+  display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1 1 auto; /* take available middle space */
-  margin: 0; /* centered purely by flex */
+  flex: 1 1 auto; /* fill middle area */
+  margin: 0;
   order: 1;
+  transform: rotate(-90deg);
+  transform-origin: center;
 }
 .stop-flag .flag-icon {
   width: 20px;
@@ -785,10 +830,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent; /* remove white background per request */
-  border-radius: 0;
-  margin-top: auto; /* push icon to the bottom */
-  margin-bottom: 2px; /* breathing space from bottom radius */
+  margin-top: auto; /* pin to bottom */
+  margin-bottom: 4px;
   order: 2;
 }
 
@@ -797,14 +840,16 @@ a {
 .stop-flag.moving .flag-text { color: #075985; }
 .stop-flag.pending .flag-text { color: #92400e; }
 .stop-card .stop-content { margin-left: 0; }
-.stop-card .stop-title { font-weight: 700; color: #111827; margin-bottom: 8px; font-size:14px }
-.stop-card .stop-sub { color:#6b7280; font-size:12px; margin-bottom: 8px }
-.stop-card .stop-row { display:flex; gap:12px; align-items:flex-start; margin-top:16px; border-top: 1px solid #f3f4f6; padding-top: 16px }
+.stop-card .stop-title { font-weight: 700; color: #111827; margin-bottom: 4px; font-size:14px }
+.stop-card .stop-sub { color:#6b7280; font-size:12px; margin-bottom: 6px }
+.stop-card .stop-row { display:flex; gap:12px; align-items:flex-start; margin-top:12px; border-top: 1px solid #f3f4f6; padding-top: 12px }
 .stop-card .stop-row .meta { color:#6b7280; font-size:13px }
 
 .stop-flag.completed { background: #ecfdf5; }
 .stop-flag.moving { background: #e6f3ff; }
 .stop-flag.pending { background: #fff6e6; }
+.stop-flag.canceled { background: #fff1f2; }
+.stop-flag.canceled .flag-text { color: #9f1239; }
 
 /* Meta labels inside stop rows to match reference layout */
 .stop-card .meta { display:flex; flex-direction:column; gap:8px; }
@@ -816,7 +861,7 @@ a {
   border: 1px solid #e5e7eb;
   background: #ffffff;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-weight: 600;
   color: #111827;
 }
@@ -826,8 +871,8 @@ a {
   border: 1px solid #3b82f6;
   color: #2563eb;
   background: transparent;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -843,7 +888,7 @@ a {
   justify-content: center;
   border: none;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
 }
@@ -872,7 +917,7 @@ a {
   background: rgba(17,24,39,0.95);
   color: #fff;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 12px;
   white-space: nowrap;
   pointer-events: none;
@@ -914,12 +959,10 @@ html, body, #__next {
 /* Detail panel divider used under the order number */
 .detail-divider {
   height: 1px;
-  width: calc(100% + 32px); /* span full panel width including 16px side padding */
-  margin-left: -16px; /* offset left so divider reaches panel edge */
-  margin-right: -16px; /* offset right so divider reaches panel edge */
+  width: 100%; /* stay within panel width to avoid overflow */
+  margin: 12px 0;
   display: block;
   background: #e5e7eb;
-  margin: 12px 0;
 }
 
 /* Footer under orders table (pagination / actions) */
@@ -929,7 +972,7 @@ html, body, #__next {
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0px 16px;
   gap: 12px;
   box-sizing: border-box;
   /* Footer stays in normal flow (non-sticky) */
@@ -939,6 +982,7 @@ html, body, #__next {
 .table-footer .rows-select { display:flex; align-items:center; gap:8px }
 .table-footer .page-info { font-size: 13px; color: #6b7280 }
 .pager-buttons .btn-ghost { height: 36px; padding: 6px 12px; border-radius: 6px; background: transparent; border: 1px solid #e5e7eb; color: #374151 }
+.pager-buttons .btn-ghost { height: 36px; padding: 6px 12px; border-radius: 4px; background: transparent; border: 1px solid #e5e7eb; color: #374151 }
 .pager-buttons .btn-ghost:disabled { opacity: 0.5; cursor: default }
 
 /* Custom select (dropup) used in the footer */
@@ -950,7 +994,7 @@ html, body, #__next {
   gap: 8px;
   height: 36px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid #e5e7eb;
   background: #fff;
   cursor: pointer;
@@ -977,7 +1021,7 @@ html, body, #__next {
   left: 0;
   min-width: 160px;
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: 4px;
   box-shadow: 0 8px 24px rgba(2,6,23,0.12);
   padding: 8px 4px;
   display: flex;
@@ -987,7 +1031,7 @@ html, body, #__next {
 }
 .custom-select-item {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   color: #111827;
   font-size: 14px;
