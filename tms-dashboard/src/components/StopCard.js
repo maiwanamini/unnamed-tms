@@ -1,15 +1,34 @@
 "use client";
 
 import StatusPill from '@/components/StatusPill';
+import React from 'react';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ArrowCircleRightOutlinedIcon from '@mui/icons-material/ArrowCircleRightOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import UploadIcon from '@mui/icons-material/Upload';
 import DownloadIcon from '@mui/icons-material/Download';
 
-export default function StopCard({ stop }) {
-  // display 'En route' as 'Moving' to match header/status pill
-  const status = (stop.status === 'En route' ? 'Moving' : stop.status) || 'Pending';
+export default function StopCard({ stop, index }) {
+  const normalizeStatus = (s) => {
+    if (!s) return 'Pending';
+    const v = String(s).toLowerCase();
+    if (v.includes('completed')) return 'Completed';
+    if (v.includes('moving') || v.includes('en route')) return 'Moving';
+    if (v.includes('cancel')) return 'Canceled'; // handle canceled/cancelled
+    return 'Pending';
+  };
+
+  const status = normalizeStatus(stop?.status);
+  const flagClass = status === 'Completed' ? 'completed' : status === 'Moving' ? 'moving' : status === 'Canceled' ? 'canceled' : 'pending';
+  const StatusIcon =
+    status === 'Completed'
+      ? CheckCircleOutlineIcon
+      : status === 'Moving'
+      ? ArrowCircleRightOutlinedIcon
+      : status === 'Pending'
+      ? AccessTimeOutlinedIcon
+      : CancelOutlinedIcon;
 
   const iconMap = {
     Moving: <ArrowCircleRightOutlinedIcon style={{ fontSize: 18, color: '#075985' }} />,
@@ -17,13 +36,14 @@ export default function StopCard({ stop }) {
     Completed: <CheckCircleOutlineIcon style={{ fontSize: 18, color: '#065f46' }} />,
   };
 
-  const flagClass = status === 'Completed' ? 'completed' : status === 'Moving' ? 'moving' : 'pending';
+  // flagClass already computed above
 
   // color map to match pill text colors
   const statusColorMap = {
     Moving: '#075985',
     Pending: '#92400e',
     Completed: '#065f46',
+    Canceled: '#9f1239',
   };
   const statusColor = statusColorMap[status] || '#6b7280';
 
@@ -34,7 +54,12 @@ export default function StopCard({ stop }) {
 
   return (
     <div className="stop-card">
-      <div className={`stop-flag ${flagClass}`}></div>
+      {/* Left vertical flag: number → text → icon */}
+      <div className={`stop-flag ${flagClass}`}>
+        <span className="flag-number" style={{ color: statusColor }}>{index}</span>
+        <span className="flag-text">{status}</span>
+        <span className="flag-icon"><StatusIcon style={{ fontSize: 20, color: statusColor }} /></span>
+      </div>
       <div className="stop-content">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -53,12 +78,11 @@ export default function StopCard({ stop }) {
             <div className="meta-label">Ref</div>
             <div className="meta-value">{stop.ref}</div>
 
-            <div style={{ height: 12 }} />
+            <div style={{ height: 4 }} />
 
             <div className="meta-label">Appointment time</div>
             <div className="meta-value">{stop.time}</div>
           </div>
-          <div style={{ marginLeft: 'auto' }} />
         </div>
 
         {stop.note && (
@@ -73,3 +97,4 @@ export default function StopCard({ stop }) {
     </div>
   );
 }
+
