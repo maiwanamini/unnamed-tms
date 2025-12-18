@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import colors from "../theme/colors";
+import spacing from "../theme/spacing";
 
 /**
  * Button
@@ -61,6 +62,8 @@ export function ThemedButton({
     } else if (variant === "twoLines") {
       // twoLines behaves like ghost visually, but the label is gray and allows two lines
       base.push(styles.ghost);
+      // apply a smaller vertical padding for twoLines
+      base.push(styles.twoLines);
       if (isDisabled) base.push(styles.ghostDisabled);
       if (pressed && !isDisabled) base.push(styles.ghostPressed);
     }
@@ -119,13 +122,13 @@ export function ThemedButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 8,
+    borderRadius: spacing.borderRadiusButton,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
   },
   defaultSize: {
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
   },
   small: {
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   ghostPressed: {
-    backgroundColor: "rgba(53,91,228,0.06)",
+    backgroundColor: "rgba(31, 31, 31, 0.04)",
   },
   ghostDisabled: {},
   content: {
@@ -188,6 +191,10 @@ const styles = StyleSheet.create({
   labelTwoLines: {
     color: "#6b7280",
     lineHeight: 16,
+  },
+  twoLines: {
+    paddingVertical: 7,
+    paddingHorizontal: 16,
   },
   spinner: {
     marginRight: 8,

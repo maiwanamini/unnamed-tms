@@ -5,7 +5,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 export default function TabsLayout() {
   return (
     <Tabs
-      options={{ headerShown: false, tabBarActiveTintColor: colors.accent }}
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.accent,
+      }}
     >
       <Tabs.Screen
         name="index"

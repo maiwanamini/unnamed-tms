@@ -3,19 +3,21 @@ import global from "../styles/global";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "../components/ThemedText";
 import { ThemedButton } from "../components/ThemedButton";
+import { Link } from "expo-router";
 
 export default function Index() {
   return (
     <SafeAreaView style={global.pageWrap}>
       {/* body */}
       <View style={global.bodyWrap}>
-        <View style={global.contentWrap}>
-          <View style={global.textWrap}>
+        <View style={global.centerWrap}>
+          <View style={global.textWrapLargeCenter}>
             <ThemedText>Welcome to</ThemedText>
             <ThemedText type="title">The Unnamed TMS</ThemedText>
             <ThemedText style={global.faded}>
               Your go-to app for truckers
             </ThemedText>
+            <Link href="/(tabs)">go to home</Link>
           </View>
         </View>
       </View>
