@@ -103,6 +103,6 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "400",
   },
 });

@@ -2,6 +2,7 @@ import { View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContactCard from "../../components/ContactCard";
 import OrderCard from "../../components/OrderCard";
+import UpcomingOrderCard from "../../components/UpcomingOrderCard";
 import { ThemedText } from "../../components/ThemedText";
 import { ThemedButton } from "../../components/ThemedButton";
 import global from "../../styles/global";
@@ -24,8 +25,20 @@ const Home = () => {
     fetcher
   );
 
-  const currentOrder = currentOrders?.[0]; // First order as "current"
-  const upcomingOrders = currentOrders?.slice(1) || []; // Rest as upcoming
+  // Fetch stops for current order
+  const currentOrder = currentOrders?.[0];
+  const { data: currentOrderStops } = useSWR(
+    token && currentOrder?._id
+      ? [`${api.stops}?order=${currentOrder._id}`, token]
+      : null,
+    fetcher
+  );
+
+  const currentOrderStopsArray = Array.isArray(currentOrderStops)
+    ? currentOrderStops
+    : currentOrderStops?.data || [];
+
+  const upcomingOrders = currentOrders?.slice(1) || [];
 
   return (
     <SafeAreaView style={global.pageWrap}>
@@ -59,16 +72,12 @@ const Home = () => {
                       />
                       <ThemedText type="subtitle">Current Order</ThemedText>
                     </View>
-                    <View>
-                      <ThemedButton variant="ghost" size="small">
-                        See all
-                      </ThemedButton>
-                    </View>
                   </View>
                   <View>
                     {currentOrder ? (
                       <OrderCard
                         order={currentOrder}
+                        stops={currentOrderStopsArray}
                         onPress={() =>
                           router.push(`/orders/${currentOrder._id}`)
                         }
@@ -88,16 +97,16 @@ const Home = () => {
                       />
                       <ThemedText type="subtitle">Upcoming Orders</ThemedText>
                     </View>
-                    <View>
+                    {/* <View>
                       <ThemedButton variant="ghost" size="small">
                         See all
                       </ThemedButton>
-                    </View>
+                    </View> */}
                   </View>
                   <View>
                     {upcomingOrders && upcomingOrders.length > 0 ? (
                       upcomingOrders.map((order) => (
-                        <OrderCard
+                        <UpcomingOrderCard
                           key={order._id}
                           order={order}
                           onPress={() => router.push(`/orders/${order._id}`)}
