@@ -20,7 +20,7 @@ export default function OrderDetail() {
   const { id } = useLocalSearchParams();
   const { token } = useAuth();
   const router = useRouter();
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Fetch order data
   const { data: order } = useSWR(
@@ -29,7 +29,7 @@ export default function OrderDetail() {
   );
 
   // Fetch stops data filtered by order ID
-  const { data: stopsData } = useSWR(
+  const { data: stopsData, mutate: mutateStops } = useSWR(
     token && id ? [`${api.stops}?order=${id}`, token] : null,
     fetcher
   );
@@ -39,20 +39,51 @@ export default function OrderDetail() {
   const stops = Array.isArray(stopsData) ? stopsData : stopsData.data || [];
   const stopCount = stops.length;
 
-  console.log("Order ID:", id);
-  console.log("Order data:", order);
-  console.log("Stops data:", stopsData);
-  console.log("Stops array:", stops);
+  // Find the first non-completed stop (current stop)
+  const currentStopIndex = stops.findIndex((stop) => !stop.completed);
+
+  // Filter stops based on showCompleted
+  const filteredStops = showCompleted
+    ? stops
+    : stops.filter((stop) => !stop.completed);
 
   const getStopColor = (index) => {
     const colors_palette = ["#c8e6c9", "#bbdefb", "#ffe0b2"];
     return colors_palette[index % colors_palette.length];
   };
 
+  const markStopAsCompleted = async (stopId, completedStatus) => {
+    try {
+      const response = await fetch(`${api.stops}/${stopId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ completed: completedStatus }),
+      });
+
+      if (response.ok) {
+        // Refresh the stops data
+        mutateStops();
+      } else {
+        console.error("Failed to mark stop as completed");
+      }
+    } catch (error) {
+      console.error("Error marking stop as completed:", error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.headerCenter}>
           <ThemedText type="title" style={styles.orderId}>
             Order #{order.orderNumber}
@@ -95,88 +126,122 @@ export default function OrderDetail() {
 
         {/* Stops List */}
         <View style={styles.stopsList}>
-          {stops.map((stop, index) => (
-            <View key={stop.id || index} style={styles.stopCard}>
-              {/* Stop Number and Status Indicator */}
-              <View style={styles.stopNumberContainer}>
-                <View
-                  style={[
-                    styles.stopNumber,
-                    { backgroundColor: getStopColor(index) },
-                  ]}
-                >
-                  <ThemedText style={styles.stopNumberText}>
-                    {index + 1}
-                  </ThemedText>
-                </View>
-                <View style={styles.stopStatusLine} />
-              </View>
+          {filteredStops.map((stop, index) => {
+            const originalIndex = stops.findIndex((s) => s._id === stop._id);
+            const isCurrentOrFirst =
+              originalIndex === currentStopIndex || originalIndex === 0;
+            const showOnLocationButton = isCurrentOrFirst || stop.completed;
 
-              {/* Stop Content */}
-              <View style={styles.stopContent}>
-                <View style={styles.stopHeader}>
-                  <View style={styles.stopHeaderLeft}>
-                    <ThemedText
-                      type="defaultSemiBold"
-                      style={styles.companyNameStop}
-                    >
-                      {stop.locationName ||
-                        stop.company ||
-                        stop.name ||
-                        "Location"}
+            return (
+              <View key={stop._id || index} style={styles.stopCard}>
+                {/* Stop Number and Status Indicator */}
+                <View style={styles.stopNumberContainer}>
+                  <View
+                    style={[
+                      styles.stopNumber,
+                      { backgroundColor: getStopColor(index) },
+                    ]}
+                  >
+                    <ThemedText style={styles.stopNumberText}>
+                      {index + 1}
                     </ThemedText>
                   </View>
+                  <View style={styles.stopStatusLine} />
                 </View>
 
-                <ThemedText style={styles.address}>
-                  {stop.address || "Address not available"}
-                </ThemedText>
+                {/* Stop Content */}
+                <View style={styles.stopContent}>
+                  <View style={styles.stopHeader}>
+                    <View style={styles.stopHeaderLeft}>
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={styles.companyNameStop}
+                      >
+                        {stop.locationName ||
+                          stop.company ||
+                          stop.name ||
+                          "Location"}
+                      </ThemedText>
+                    </View>
+                  </View>
 
-                {(stop.city || stop.postalCode) && (
                   <ThemedText style={styles.address}>
-                    {stop.city}
-                    {stop.city && stop.postalCode ? ", " : ""}
-                    {stop.postalCode}
+                    {stop.address || "Address not available"}
                   </ThemedText>
-                )}
 
-                {stop.type && (
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.label}>Type</ThemedText>
-                    <ThemedText style={styles.value}>
-                      {stop.type.charAt(0).toUpperCase() + stop.type.slice(1)}
+                  {(stop.city || stop.postalCode) && (
+                    <ThemedText style={styles.address}>
+                      {stop.city}
+                      {stop.city && stop.postalCode ? ", " : ""}
+                      {stop.postalCode}
                     </ThemedText>
-                  </View>
-                )}
+                  )}
 
-                {stop.plannedTime && (
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.label}>Planned time</ThemedText>
-                    <ThemedText style={styles.value}>
-                      {new Date(stop.plannedTime).toLocaleDateString()}{" "}
-                      {new Date(stop.plannedTime).toLocaleTimeString()}
-                    </ThemedText>
-                  </View>
-                )}
+                  {stop.type && (
+                    <View style={styles.infoRow}>
+                      <ThemedText style={styles.label}>Type</ThemedText>
+                      <ThemedText style={styles.value}>
+                        {stop.type.charAt(0).toUpperCase() + stop.type.slice(1)}
+                      </ThemedText>
+                    </View>
+                  )}
 
-                {stop.reference && (
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.label}>Ref</ThemedText>
-                    <ThemedText style={styles.value}>
-                      {stop.reference}
-                    </ThemedText>
-                  </View>
-                )}
+                  {stop.plannedTime && (
+                    <View style={styles.infoRow}>
+                      <ThemedText style={styles.label}>Planned time</ThemedText>
+                      <ThemedText style={styles.value}>
+                        {new Date(stop.plannedTime).toLocaleDateString()}{" "}
+                        {new Date(stop.plannedTime).toLocaleTimeString()}
+                      </ThemedText>
+                    </View>
+                  )}
 
-                {stop.note && (
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.label}>Note</ThemedText>
-                    <ThemedText style={styles.value}>{stop.note}</ThemedText>
-                  </View>
-                )}
+                  {stop.reference && (
+                    <View style={styles.infoRow}>
+                      <ThemedText style={styles.label}>Ref</ThemedText>
+                      <ThemedText style={styles.value}>
+                        {stop.reference}
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  {stop.note && (
+                    <View style={styles.infoRow}>
+                      <ThemedText style={styles.label}>Note</ThemedText>
+                      <ThemedText style={styles.value}>{stop.note}</ThemedText>
+                    </View>
+                  )}
+
+                  {/* On Location Button */}
+                  {showOnLocationButton && (
+                    <TouchableOpacity
+                      style={[
+                        styles.onLocationButton,
+                        stop.completed && styles.onLocationButtonUndone,
+                      ]}
+                      onPress={() =>
+                        markStopAsCompleted(stop._id, !stop.completed)
+                      }
+                    >
+                      <MaterialIcons
+                        name={stop.completed ? "undo" : "location-on"}
+                        size={18}
+                        color={stop.completed ? "#355BE4" : "white"}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.onLocationButtonText,
+                          stop.completed && styles.onLocationButtonTextUndone,
+                        ]}
+                      >
+                        {stop.completed ? "Mark as undone" : "On Location"}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -197,6 +262,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundOnTop,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  backButton: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerCenter: {
     flex: 1,
@@ -314,5 +385,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     fontWeight: "500",
+  },
+  onLocationButton: {
+    backgroundColor: colors.accent,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  onLocationButtonUndone: {
+    backgroundColor: "rgba(53, 91, 228, 0.2)",
+  },
+  onLocationButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  onLocationButtonTextUndone: {
+    color: "#355BE4",
   },
 });
