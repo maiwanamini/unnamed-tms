@@ -6,13 +6,34 @@ import React from "react";
 import global from "../styles/global";
 
 // OrderCard now accepts an `order` prop and renders available fields
-const OrderCard = ({ order = {}, onPress }) => {
+const OrderCard = ({ order = {}, stops = [], onPress }) => {
   const id = order.orderNumber || "--";
-  const start =
-    order.start_location || order.from || order.pickup || "start location";
-  const end =
-    order.end_location || order.to || order.delivery || "end location";
   const status = order.status || order.state || "unknown";
+
+  // Get first stop address as start location
+  const firstStop = stops && stops.length > 0 ? stops[0] : null;
+  const start = firstStop?.address || "start location";
+
+  // Get last stop address as end location
+  const lastStop = stops && stops.length > 0 ? stops[stops.length - 1] : null;
+  const end = lastStop?.address || "end location";
+
+  // Format time from planned time
+  const formatTime = (dateString) => {
+    if (!dateString) return "--";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "--";
+    }
+  };
+
+  const firstStopTime = formatTime(firstStop?.plannedTime);
+  const lastStopTime = formatTime(lastStop?.plannedTime);
 
   const statusToVariant = {
     pending: "planned",
@@ -25,9 +46,6 @@ const OrderCard = ({ order = {}, onPress }) => {
     cancelled: "canceled",
   };
   const tagVariant = statusToVariant[String(status).toLowerCase()] || "planned";
-
-  //temp for testing purposes
-  const name = order.customerName || "Customer Name";
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -55,9 +73,19 @@ const OrderCard = ({ order = {}, onPress }) => {
               alignItems: "center",
             }}
           >
-            <ThemedText>{name}</ThemedText>
+            <View style={{ flex: 1 }}>
+              <ThemedText numberOfLines={1}>{start}</ThemedText>
+              <ThemedText type="small" style={global.faded} numberOfLines={1}>
+                {firstStopTime}
+              </ThemedText>
+            </View>
             <MaterialIcons name="arrow-forward" size={16} color="gray" />
-            <ThemedText>{end}</ThemedText>
+            <View style={{ flex: 1 }}>
+              <ThemedText numberOfLines={1}>{end}</ThemedText>
+              <ThemedText type="small" style={global.faded} numberOfLines={1}>
+                {lastStopTime}
+              </ThemedText>
+            </View>
           </View>
         </View>
         <View style={{ width: "100%", alignItems: "flex-end" }}>

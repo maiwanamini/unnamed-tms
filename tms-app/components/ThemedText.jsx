@@ -11,6 +11,10 @@ export function ThemedText({ style, type = "default", children, ...rest }) {
       ? styles.subtitle
       : type === "link"
       ? styles.link
+      : type === "h2"
+      ? styles.h2
+      : type === "small"
+      ? styles.small
       : styles.default;
 
   return (
@@ -31,18 +35,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   h2: {
-    fontSize: 20,
+    fontSize: 16,
     lineHeight: 28,
     fontWeight: "600",
+  },
+  small: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   title: {
     fontSize: 24,
     lineHeight: 26,
-    fontFamily: "InstrumentSerif_400Regular",
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: "InstrumentSerif_400Regular",
   },
   link: {
     lineHeight: 30,
