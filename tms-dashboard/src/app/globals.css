@@ -143,6 +143,16 @@ a {
   font-size: 13px;
 }
 
+.btn-outline {
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid rgba(37,99,235,0.6);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
 /* Simple table */
 .table {
   width: 100%;
@@ -150,6 +160,207 @@ a {
   background: white;
   border-radius: 0;
   overflow: hidden;
+}
+
+/* Right-side overlay drawer (used for Add Customer) */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 5000;
+}
+.overlay-drawer {
+  width: 560px;
+  max-width: 100%;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -4px 0 16px rgba(15,23,42,0.15);
+}
+
+.overlay-form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.overlay-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+.overlay-title {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #111827;
+}
+.overlay-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+.overlay-clear {
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 8px 6px;
+}
+.overlay-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 8px 6px;
+}
+
+.overlay-body {
+  padding: 0 20px 16px 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.overlay-section {
+  margin-top: 6px;
+  margin-bottom: 18px;
+}
+.overlay-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 18px 0 10px 0;
+}
+
+.overlay-field {
+  margin-bottom: 14px;
+}
+.overlay-field label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+/* In the overlay, keep fields tight like the phone control (avoid the global input margin-top). */
+.overlay-input {
+  margin-top: 0;
+}
+
+.overlay-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: #f3f4f6;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+}
+.overlay-input::placeholder { color: #9ca3af; }
+
+.phone-input {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  border: 1px solid transparent;
+  /* allow the country dropdown to escape the field */
+  overflow: visible;
+}
+.phone-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 14px 0 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #111827;
+}
+.phone-prefix .phone-code { font-weight: 600; }
+.phone-prefix .custom-select-caret { color: #6b7280; }
+.phone-prefix .custom-select-caret {
+  margin-left: -2px; /* reduce space left of the arrow */
+  margin-right: 2px; /* a bit more space to the right */
+}
+
+.flag-img {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.phone-input { position: relative; }
+.phone-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  min-width: 320px;
+  max-height: 320px;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12);
+  padding: 8px 4px;
+  z-index: 4000;
+}
+.phone-menu-search {
+  padding: 6px 8px 10px 8px;
+}
+.phone-menu-search .phone-menu-search-box {
+  width: 100%;
+}
+.phone-menu-input {
+  margin-top: 0;
+}
+.phone-number {
+  flex: 1 1 auto;
+  height: 44px;
+  border: none;
+  background: transparent;
+  padding: 0 12px 0 6px;
+  margin: 0;
+  outline: none;
+  color: #111827;
+  box-sizing: border-box;
+  line-height: normal;
+  display: block;
+}
+.phone-number::placeholder { color: #9ca3af; }
+
+.overlay-footer {
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.overlay-footer .btn-outline,
+.overlay-footer .btn-primary {
+  flex: 1 1 0;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.overlay-footer .btn-primary.overlay-primary {
+  border-radius: 4px;
 }
 
 .table th,
@@ -430,6 +641,22 @@ a {
   font-size: 14px;
   height: 40px;
 }
+.filters-row .filter-input {
+  width: 160px;
+  max-width: 160px;
+  height: 40px;
+  margin-top: 0;
+  padding: 0 14px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+}
+.filters-row .filter-input::placeholder {
+  color: #9ca3af;
+}
 .filters-row .filter span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -439,6 +666,216 @@ a {
 .filters-row .search {
   width: 320px;
 }
+
+/* Date range dropdown (Orders > Choose Date) */
+.date-range-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12);
+  z-index: 1000;
+  overflow: visible;
+  max-width: calc(100vw - 32px);
+}
+.date-range-popover::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 9px solid #e5e7eb;
+  z-index: 999;
+}
+.date-range-popover::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #ffffff;
+  z-index: 1001;
+}
+
+.date-range-body {
+  display: flex;
+}
+
+.drp-presets {
+  width: 170px;
+  padding: 12px;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #ffffff;
+}
+.drp-preset {
+  background: transparent;
+  border: none;
+  color: #111827;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.drp-preset:hover { background: #f3f4f6; }
+
+.drp-main {
+  padding: 12px;
+}
+
+.drp-inputs {
+  display: grid;
+  grid-template-columns: 260px 260px;
+  gap: 18px;
+  justify-content: start;
+  margin-bottom: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.drp-input { min-width: 0; }
+.drp-input-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.drp-input input {
+  margin-top: 0;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 0 12px;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+}
+.drp-input input::placeholder { color: #9ca3af; }
+
+.drp-cal {
+  display: flex;
+  align-items: center;
+}
+.drp-nav {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.drp-nav:hover { color: #6b7280; }
+.drp-nav:focus { outline: none; }
+.drp-month[data-side="left"] .drp-nav-prev { position: absolute; left: 0; }
+.drp-month[data-side="right"] .drp-nav-next { position: absolute; right: 0; }
+
+.drp-months {
+  display: flex;
+  gap: 18px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.drp-month { width: 260px; }
+.drp-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  position: relative;
+}
+.drp-month-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.drp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  justify-content: start;
+  gap: 6px;
+  margin-top: 8px;
+}
+.drp-weekday {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.drp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  justify-content: start;
+  gap: 6px;
+  margin-top: 6px;
+}
+.drp-day {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #111827;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.drp-day:hover { background: #f3f4f6; }
+.drp-day.drp-empty { visibility: hidden; pointer-events: none; }
+
+.drp-day.in-range { background: rgba(37,99,235,0.10); }
+.drp-day.is-start,
+.drp-day.is-end {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.drp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+.drp-actions-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.drp-btn {
+  border: none;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.drp-cancel { background: transparent; color: #6b7280; }
+.drp-cancel:hover { background: #f3f4f6; }
+.drp-apply { background: #2563eb; color: #ffffff; }
+.drp-apply:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Card wrapper for tables */
 .card {
@@ -699,6 +1136,12 @@ a {
 .status-canceled { background: #fff1f2; color: #9f1239; }
 .status-canceled .status-icon { color: #9f1239; }
 
+/* Trucks status pills (Active/Inactive) - same pill shape, separate variants */
+.truck-status-active { background: #ecfdf5; color: #065f46; }
+.truck-status-active .status-icon { color: #065f46; }
+.truck-status-inactive { background: #f3f4f6; color: #374151; }
+.truck-status-inactive .status-icon { color: #374151; }
+
 .status-icon {
   display: inline-flex;
   align-items: center;
@@ -706,6 +1149,30 @@ a {
   font-size: 20px;
 }
 .status-text { line-height: 1; }
+
+/* Assign links in Trucks table */
+.assign-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-blue);
+  font-size: 14px;
+  font-weight: 500;
+}
+.assign-link:hover { text-decoration: underline; }
+.assign-select {
+  width: 100%;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 0 10px;
+  margin: 0;
+}
 
 /* Detail panel */
 .detail-panel {
@@ -730,9 +1197,51 @@ a {
 /* Native table styling for OrdersTable */
 .orders-table th,
 .orders-table td { vertical-align: middle; }
-.orders-table tbody tr:nth-child(even) { background: #f3f4f6; }
-.orders-table tbody tr:hover { background: #eef2f7; }
+.orders-table tbody tr:not(.orders-date-group):nth-child(even) { background: #f3f4f6; }
+.orders-table tbody tr:not(.orders-date-group):hover { background: #eef2f7; }
 .orders-table tbody tr.selected { background: #eef2f7; }
+
+/* Date grouping row inside Orders table */
+.orders-table tbody tr.orders-date-group { background: transparent !important; }
+.orders-table tbody tr.orders-date-group:hover { background: transparent !important; }
+.orders-table tbody tr.orders-date-group td {
+  padding: 0 !important;
+  height: 0;
+  line-height: 0;
+  border: 0;
+}
+.orders-date-divider {
+  position: relative;
+  height: 0;
+  line-height: 0;
+  padding: 0;
+  overflow: visible;
+}
+.orders-date-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 0 0 3px 3px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  position: absolute;
+  left: 0;
+  top: 2px;
+  z-index: 1;
+}
+.orders-date-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: #2563eb;
+  opacity: 0.75;
+}
 
 .detail-panel::after {
   content: "";
@@ -859,7 +1368,7 @@ a {
   border: 1px solid #3b82f6;
   color: #2563eb;
   background: transparent;
-  padding: 6px;
+  padding: 10px 12px;
   border-radius: 4px;
   font-weight: 700;
   cursor: pointer;
@@ -966,7 +1475,8 @@ html, body, #__next {
   box-sizing: border-box;
   /* Footer stays in normal flow (non-sticky) */
   position: relative;
-  z-index: 8; /* above rows but not sticky */
+  /* Must be above the sticky table header so the footer dropup doesn't render underneath it */
+  z-index: 50;
 }
 .table-footer .rows-select { display:flex; align-items:center; gap:8px }
 .table-footer .page-info { font-size: 13px; color: #6b7280 }
@@ -1006,7 +1516,7 @@ html, body, #__next {
 .custom-select.open .custom-select-caret { transform: rotate(180deg); }
 .custom-select-menu {
   position: absolute;
-  bottom: calc(100% + 8px); /* dropup: show above the trigger */
+  bottom: calc(100% + 9px); /* dropup: show above the trigger (room for pointer) */
   left: 0;
   min-width: 160px;
   background: #ffffff;
@@ -1016,7 +1526,31 @@ html, body, #__next {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  z-index: 1200;
+  z-index: 2000;
+}
+.custom-select-menu::after {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 16px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 9px solid #e5e7eb; /* border/shadow color */
+  z-index: 999;
+}
+.custom-select-menu::before {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 16px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #ffffff; /* dropdown background */
+  z-index: 1001;
 }
 .custom-select-item {
   padding: 10px 12px;

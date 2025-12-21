@@ -1,32 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import SettingsIcon from "@mui/icons-material/Settings";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FiltersRow from "@/components/FiltersRow";
 import Card from "@/components/Card";
 import OrdersTable from "@/components/OrdersTable";
 import DetailPanel from "@/components/DetailPanel";
 
+function startOfDayUTC(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
 const MOCK_ORDERS = [
-  { id: "O-01", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-02", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-03", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-04", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-05", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-06", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-07", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-08", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-09", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-10", client: "Client name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Canceled" },
+  { id: "O-01", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
+  { id: "O-02", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
+  { id: "O-03", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
+  { id: "O-04", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
+  { id: "O-05", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
+  { id: "O-06", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
+  { id: "O-07", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
+  { id: "O-08", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
+  { id: "O-09", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
+  { id: "O-10", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Canceled" },
 ];
 
 // Expand mock orders so we can test scrolling
 const ALL_ORDERS = Array.from({ length: 50 }).map((_, i) => {
   const base = MOCK_ORDERS[i % MOCK_ORDERS.length];
-  return { ...base, id: `O-${String(i + 1).padStart(2, "0")}` };
+  const createdAt = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString();
+  return { ...base, id: `O-${String(i + 1).padStart(2, "0")}`, createdAt };
 });
 
 
@@ -34,29 +36,38 @@ export default function Page() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(ALL_ORDERS[1]);
   const [statusFilter, setStatusFilter] = useState([]);
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
 
-  const filtered = ALL_ORDERS.filter((o) => {
-    // text search
-    if (query) {
-      const q = query.toLowerCase();
-      if (
-        !(
-          o.id.toLowerCase().includes(q) ||
-          o.client.toLowerCase().includes(q) ||
-          o.driver.toLowerCase().includes(q)
-        )
-      ) {
-        return false;
+  const filtered = useMemo(() => {
+    const start = dateRange?.start ? startOfDayUTC(new Date(dateRange.start)) : null;
+    const end = dateRange?.end ? startOfDayUTC(new Date(dateRange.end)) : null;
+
+    return ALL_ORDERS.filter((o) => {
+      // text search
+      if (query) {
+        const q = query.toLowerCase();
+        const customer = (o.customer || "").toLowerCase();
+        if (!(o.id.toLowerCase().includes(q) || customer.includes(q) || o.driver.toLowerCase().includes(q))) {
+          return false;
+        }
       }
-    }
 
-    // status filter (empty = all)
-    if (statusFilter && statusFilter.length > 0) {
-      if (!statusFilter.includes(o.status)) return false;
-    }
+      // status filter (empty = all)
+      if (statusFilter && statusFilter.length > 0) {
+        if (!statusFilter.includes(o.status)) return false;
+      }
 
-    return true;
-  });
+      // date filter (empty = all)
+      if (start && end) {
+        const t = startOfDayUTC(new Date(o.createdAt)).getTime();
+        const a = Math.min(start.getTime(), end.getTime());
+        const b = Math.max(start.getTime(), end.getTime());
+        if (t < a || t > b) return false;
+      }
+
+      return true;
+    });
+  }, [dateRange, query, statusFilter]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -83,6 +94,8 @@ export default function Page() {
                 setQuery={setQuery}
                 statusFilter={statusFilter}
                 setStatusFilter={setStatusFilter}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
               />
             </div>
           </Card>
