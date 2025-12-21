@@ -17,10 +17,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="orders/[id]"
           options={{
-            title: "orders page title",
-            headerShown: true,
-            headerTransparent: true,
-            headerStyle: { backgroundColor: "transparent" },
+            headerShown: false,
           }}
         />
         <Stack.Screen
