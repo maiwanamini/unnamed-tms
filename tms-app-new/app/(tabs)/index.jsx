@@ -157,7 +157,12 @@ const Home = () => {
                   </View>
                   <View>
                     {currentOrder ? (
-                      <OrderCard order={currentOrder} />
+                      <OrderCard
+                        order={currentOrder}
+                        onPress={() =>
+                          router.push(`/orders/${currentOrder._id}`)
+                        }
+                      />
                     ) : (
                       <ThemedText>No current orders</ThemedText>
                     )}
@@ -182,7 +187,11 @@ const Home = () => {
                   <View>
                     {upcomingOrders && upcomingOrders.length > 0 ? (
                       upcomingOrders.map((order) => (
-                        <OrderCard key={order.id} order={order} />
+                        <OrderCard
+                          key={order._id}
+                          order={order}
+                          onPress={() => router.push(`/orders/${order._id}`)}
+                        />
                       ))
                     ) : (
                       <ThemedText>No upcoming orders</ThemedText>
