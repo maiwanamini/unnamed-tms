@@ -10,53 +10,80 @@ import IconButton from "./IconButton";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 
-const ContactCard = ({ contact }) => {
+const ContactCard = ({ companyId, contact }) => {
   const { token } = useAuth();
 
-  const { data: users } = useSWR(token ? [api.users, token] : null, fetcher);
+  const resolvedCompanyId = companyId || contact?.companyId;
 
-  const u = contact || (users && users.length > 0 ? users[0] : null);
+  // Fetch a single company by id (when provided)
+  const { data: company } = useSWR(
+    token && resolvedCompanyId
+      ? [`${api.companies}/${resolvedCompanyId}`, token]
+      : null,
+    fetcher
+  );
 
-  const name = u?.companyName || u?.name || "Company name";
-  const info = u?.companyInfo || u?.email || "Company information";
-  const phone = u?.phone || u?.telephone;
-  const email = u?.email;
+  // Fallback: fetch all companies and pick the first if no companyId was passed
+  const { data: companies } = useSWR(
+    token && !resolvedCompanyId ? [api.companies, token] : null,
+    fetcher
+  );
+
+  const effectiveCompany = resolvedCompanyId
+    ? company
+    : Array.isArray(companies) && companies.length > 0
+    ? companies[0]
+    : null;
+
+  const name = effectiveCompany?.name || "Company name";
+  const info = effectiveCompany?.companyId
+    ? `MC: ${effectiveCompany.companyId}`
+    : "Company information";
+  const email = effectiveCompany?.email;
+  const phone = effectiveCompany?.phone;
 
   return (
     <View
       style={{
         gap: 16,
         backgroundColor: "white",
-        padding: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderRadius: 16,
         justifyContent: "space-between",
         flexDirection: "row",
         alignItems: "center",
       }}
     >
-      <View>
-        {/* profile image */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: colors.text,
+          }}
+        />
         <View style={global.textWrapMainLeftSmallest}>
-          <ThemedText>{name}</ThemedText>
-          <ThemedText>{info}</ThemedText>
+          <ThemedText type="h2" style={{ marginBottom: 2 }}>
+            {name}
+          </ThemedText>
+          <ThemedText style={{ color: colors.muted }}>{info}</ThemedText>
         </View>
       </View>
-      <View style={global.buttonWrapSmall}>
-        {phone ? (
-          <IconButton
-            icon={
-              <MaterialIcons name="phone" size={16} color={colors.accent} />
-            }
-            href={`tel:${phone}`}
-            accessibilityLabel={`Call ${phone}`}
-          />
-        ) : null}
+      <View style={[global.buttonWrapSmall, { columnGap: 12 }]}>
         {email ? (
           <IconButton
-            icon={
-              <MaterialIcons name="email" size={16} color={colors.accent} />
-            }
+            icon={<MaterialIcons name="email" size={18} color={colors.text} />}
             href={`mailto:${email}`}
             accessibilityLabel={`Email ${email}`}
+          />
+        ) : null}
+        {phone ? (
+          <IconButton
+            icon={<MaterialIcons name="call" size={18} color={colors.text} />}
+            href={`tel:${phone}`}
+            accessibilityLabel={`Call ${phone}`}
           />
         ) : null}
       </View>

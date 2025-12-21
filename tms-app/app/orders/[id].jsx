@@ -8,22 +8,24 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import useSWR from "swr";
+import { useSWRConfig } from "swr";
 import { useAuth } from "../../context/AuthContext";
 import fetcher from "../../lib/_fetcher";
 import { api } from "../../lib/api";
 import { ThemedText } from "../../components/ThemedText";
 import colors from "../../theme/colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams();
   const { token } = useAuth();
   const router = useRouter();
+  const { mutate: globalMutate } = useSWRConfig();
   const [showCompleted, setShowCompleted] = useState(false);
 
   // Fetch order data
-  const { data: order } = useSWR(
+  const { data: order, mutate: mutateOrder } = useSWR(
     token && id ? [`${api.orders}/${id}`, token] : null,
     fetcher
   );
@@ -34,22 +36,28 @@ export default function OrderDetail() {
     fetcher
   );
 
-  if (!order || !stopsData) return null;
-
-  const stops = Array.isArray(stopsData) ? stopsData : stopsData.data || [];
+  const stops = Array.isArray(stopsData) ? stopsData : stopsData?.data || [];
   const stopCount = stops.length;
 
-  // Find the first non-completed stop (current stop)
-  const currentStopIndex = stops.findIndex((stop) => !stop.completed);
+  const updateOrderStatus = async (newStatus) => {
+    try {
+      const response = await fetch(`${api.orders}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-  // Filter stops based on showCompleted
-  const filteredStops = showCompleted
-    ? stops
-    : stops.filter((stop) => !stop.completed);
-
-  const getStopColor = (index) => {
-    const colors_palette = ["#c8e6c9", "#bbdefb", "#ffe0b2"];
-    return colors_palette[index % colors_palette.length];
+      if (response.ok) {
+        mutateOrder();
+        // Revalidate the orders list on home page
+        globalMutate([api.orders, token]);
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+    }
   };
 
   const markStopAsCompleted = async (stopId, completedStatus) => {
@@ -65,13 +73,62 @@ export default function OrderDetail() {
 
       if (response.ok) {
         // Refresh the stops data
-        mutateStops();
+        await mutateStops();
       } else {
         console.error("Failed to mark stop as completed");
       }
     } catch (error) {
       console.error("Error marking stop as completed:", error);
     }
+  };
+
+  // Auto-update order status based on stops
+  useEffect(() => {
+    if (!order || !stops || stops.length === 0) return;
+
+    const allCompleted = stops.every((stop) => stop.completed);
+    const firstStop = stops[0];
+    const firstStopTime = firstStop?.plannedTime
+      ? new Date(firstStop.plannedTime)
+      : null;
+    const now = new Date();
+
+    // If all stops completed → set to completed
+    if (allCompleted && order.status !== "completed") {
+      updateOrderStatus("completed");
+    }
+    // If first stop time has passed → set to moving
+    else if (
+      firstStopTime &&
+      now > firstStopTime &&
+      !allCompleted &&
+      order.status !== "moving"
+    ) {
+      updateOrderStatus("moving");
+    }
+    // Otherwise → set to pending
+    else if (
+      !allCompleted &&
+      (!firstStopTime || now <= firstStopTime) &&
+      order.status !== "pending"
+    ) {
+      updateOrderStatus("pending");
+    }
+  }, [stops, order]);
+
+  if (!order || !stopsData) return null;
+
+  // Find the first non-completed stop (current stop)
+  const currentStopIndex = stops.findIndex((stop) => !stop.completed);
+
+  // Filter stops based on showCompleted
+  const filteredStops = showCompleted
+    ? stops
+    : stops.filter((stop) => !stop.completed);
+
+  const getStopColor = (index) => {
+    const colors_palette = ["#c8e6c9", "#bbdefb", "#ffe0b2"];
+    return colors_palette[index % colors_palette.length];
   };
 
   return (
