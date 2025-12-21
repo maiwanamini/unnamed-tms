@@ -2,20 +2,26 @@
 
 import { useState } from "react";
 import { useOverlay } from "@/hooks/useOverlay";
-import { useCustomers } from "@/hooks/useCustomers";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
 
-export default function NewCustomerForm() {
-  const { closeOverlay } = useOverlay();
-  const { mutate } = useCustomers();
+function makeDriverId() {
+  const n = Date.now() % 10000;
+  return `DR-${String(n).padStart(4, "0")}`;
+}
+
+export default function NewDriverForm() {
+  const { closeOverlay, data } = useOverlay();
+
+  const trucks = data?.trucks || [];
+  const onCreate = data?.onCreate;
 
   const initial = {
-    name: "",
-    address: "",
-    contactName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     email: "",
+    truckId: "",
   };
 
   const [form, setForm] = useState(initial);
@@ -24,26 +30,36 @@ export default function NewCustomerForm() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const clearAll = () => setForm(initial);
+
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    await fetch("http://localhost:4000/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    const fullName = [form.firstName, form.lastName].filter(Boolean).join(" ").trim() || "Full Name";
+    const t = trucks.find((x) => x.id === form.truckId);
+    const createdAt = new Date().toISOString();
 
-    // refresh SWR cache
-    mutate();
+    const driver = {
+      id: makeDriverId(),
+      fullName,
+      status: "Active",
+      phone: form.phone,
+      email: form.email,
+      age: 31,
+      truckId: t?.id || "",
+      truckName: t?.name || "",
+      createdAt,
+      avatarUrl: "",
+    };
+
+    onCreate?.(driver);
     closeOverlay();
   };
-
-  const clearAll = () => setForm(initial);
 
   return (
     <form onSubmit={handleSubmit} className="overlay-form">
       <div className="overlay-topbar">
-        <div className="overlay-title">ADD CUSTOMER</div>
+        <div className="overlay-title">ADD DRIVER</div>
         <div className="overlay-actions">
           <button type="button" className="overlay-clear" onClick={clearAll}>
             <DeleteOutlineIcon style={{ fontSize: 18 }} />
@@ -60,52 +76,54 @@ export default function NewCustomerForm() {
           <div className="overlay-section-title">1. General</div>
 
           <div className="overlay-field">
-            <label>Name</label>
+            <label>First name</label>
             <input
               className="overlay-input"
-              placeholder="Enter Name"
-              value={form.name}
-              onChange={(e) => update("name", e.target.value)}
+              placeholder="Enter first name"
+              value={form.firstName}
+              onChange={(e) => update("firstName", e.target.value)}
             />
           </div>
 
           <div className="overlay-field">
-            <label>Address</label>
+            <label>Last name</label>
             <input
               className="overlay-input"
-              placeholder="Enter Address"
-              value={form.address}
-              onChange={(e) => update("address", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="overlay-section">
-          <div className="overlay-section-title">2. Contact</div>
-
-          <div className="overlay-field">
-            <label>Contact Name</label>
-            <input
-              className="overlay-input"
-              placeholder="Enter Contact Name"
-              value={form.contactName}
-              onChange={(e) => update("contactName", e.target.value)}
+              placeholder="Enter last name"
+              value={form.lastName}
+              onChange={(e) => update("lastName", e.target.value)}
             />
           </div>
 
           <div className="overlay-field">
-            <label>Contact Phone</label>
+            <label>Driver Phone</label>
             <PhoneInput value={form.phone} onChange={(v) => update("phone", v)} />
           </div>
 
           <div className="overlay-field">
-            <label>Contact E-mail</label>
+            <label>Driver E-mail</label>
             <input
               className="overlay-input"
               placeholder="planning@customer.com"
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="overlay-section">
+          <div className="overlay-section-title">2. Optional</div>
+
+          <div className="overlay-field">
+            <label>Truck</label>
+            <select className="overlay-input" value={form.truckId} onChange={(e) => update("truckId", e.target.value)}>
+              <option value="">None</option>
+              {trucks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

@@ -11,21 +11,14 @@ import NoteIcon from '@mui/icons-material/Note';
 import StatusPill from "@/components/StatusPill";
 import StopCard from '@/components/StopCard';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import { useState, useEffect } from 'react';
 
 export default function DetailPanel({ selected }) {
-  const [stops, setStops] = useState(selected?.stops || [
+  const stops = selected?.stops || [
     { id: 1, type: 'pickup', title: 'Address Name', address: 'Address', ref: '#Reference', time: 'Date, Time', note: 'Notes', status: 'Completed' },
     { id: 2, type: 'dropoff', title: 'Address Name', address: 'Address', ref: '#Reference', time: 'Date, Time', note: 'Notes', status: 'Moving' },
     { id: 3, type: 'dropoff', title: 'Address Name', address: 'Address', ref: '#Reference', time: 'Date, Time', note: 'Notes', status: 'Pending' },
     { id: 4, type: 'dropoff', title: 'Address Name', address: 'Address', ref: '#Reference', time: 'Date, Time', note: 'Notes', status: 'Canceled' },
-  ]);
-
-  useEffect(() => {
-    if (selected?.stops) setStops(selected.stops);
-  }, [selected]);
-
-  const flagClass = (s) => (s === 'Completed' ? 'completed' : (s === 'En route' || s === 'Moving') ? 'moving' : 'pending');
+  ];
 
   return (
     <aside className="detail-panel">

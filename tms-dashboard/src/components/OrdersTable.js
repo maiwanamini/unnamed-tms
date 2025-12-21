@@ -1,13 +1,107 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TableFooter from "@/components/TableFooter";
 import StatusPill from "@/components/StatusPill";
+
+function startOfDayUTC(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function isSameDayUTC(a, b) {
+  if (!a || !b) return false;
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function formatShortDateUTC(date) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
 
 export default function OrdersTable({ orders = [], selected, setSelected }) {
   const wrapperRef = useRef(null);
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
+
+  const todayUTC = useMemo(() => startOfDayUTC(new Date()), []);
+  const yesterdayUTC = useMemo(() => {
+    const d = new Date(todayUTC.getTime());
+    d.setUTCDate(d.getUTCDate() - 1);
+    return startOfDayUTC(d);
+  }, [todayUTC]);
+
+  const sortedOrders = useMemo(() => {
+    const norm = (s) => {
+      const v = String(s || "");
+      return v === "En route" ? "Moving" : v;
+    };
+    const rank = (s) => {
+      switch (String(s || "").toLowerCase()) {
+        case "pending":
+          return 0;
+        case "moving":
+          return 1;
+        case "completed":
+          return 2;
+        case "canceled":
+        case "cancelled":
+          return 3;
+        default:
+          return 99;
+      }
+    };
+
+    const dayKey = (o) => {
+      const raw = o?.createdAt;
+      const parsed = raw ? new Date(raw) : new Date();
+      return startOfDayUTC(parsed).getTime();
+    };
+
+    return orders
+      .map((o, idx) => ({ o: { ...o, status: norm(o.status) }, idx, day: dayKey(o) }))
+      .sort((a, b) => {
+        const dd = b.day - a.day; // newest day first (Today, then Yesterday, etc.)
+        if (dd !== 0) return dd;
+        const ds = rank(a.o.status) - rank(b.o.status); // within day: Pending -> Moving -> Completed -> Canceled
+        return ds !== 0 ? ds : a.idx - b.idx;
+      })
+      .map((x) => x.o);
+  }, [orders]);
+
+  const rows = useMemo(() => {
+    const slice = (() => {
+      if (rowsPerPage === Infinity) return sortedOrders;
+      const start = page * rowsPerPage;
+      const end = Math.min(start + rowsPerPage, sortedOrders.length);
+      return sortedOrders.slice(start, end);
+    })();
+
+    const labelFor = (o) => {
+      const raw = o?.createdAt;
+      const parsed = raw ? new Date(raw) : new Date();
+      const day = startOfDayUTC(parsed);
+      if (isSameDayUTC(day, todayUTC)) return "Today";
+      if (isSameDayUTC(day, yesterdayUTC)) return "Yesterday";
+      return formatShortDateUTC(day);
+    };
+
+    const out = [];
+    let lastLabel = null;
+    for (const o of slice) {
+      const label = labelFor(o);
+      if (label !== lastLabel) {
+        out.push({ type: "group", key: `g-${label}`, label });
+        lastLabel = label;
+      }
+      out.push({ type: "order", key: o.id, order: o });
+    }
+
+    return out;
+  }, [page, rowsPerPage, sortedOrders, todayUTC, yesterdayUTC]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -56,13 +150,6 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
     { key: "destination", label: "Destination", width: '5rem' },
     { key: "status", label: "Status", width: '3rem' },
   ];
-
-  const getSlice = () => {
-    if (rowsPerPage === Infinity) return orders;
-    const start = page * rowsPerPage;
-    const end = Math.min(start + rowsPerPage, orders.length);
-    return orders.slice(start, end);
-  };
 
   return (
     <div className="w-full" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>

@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import GroupIcon from "@mui/icons-material/Group";
-import MapIcon from "@mui/icons-material/Map";
+import { Package, Seatbelt, Truck, TruckTrailer, Users } from "@phosphor-icons/react";
 
 export default function Sidebar() {
   return (
@@ -26,19 +23,19 @@ export default function Sidebar() {
 
       <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <Link className="sidebar-link" href="/dashboard/orders">
-          <Inventory2Icon style={{ fontSize: 18 }} /> <span>Orders</span>
+          <Package size={18} weight="fill" /> <span>Orders</span>
         </Link>
         <Link className="sidebar-link" href="/dashboard/customers">
-          <GroupIcon style={{ fontSize: 18 }} /> <span>Customers</span>
+          <Users size={18} weight="fill" /> <span>Customers</span>
         </Link>
-        <Link className="sidebar-link" href="/dashboard/fleet/trucks">
-          <LocalShippingIcon style={{ fontSize: 18 }} /> <span>Trucks</span>
+        <Link className="sidebar-link" href="/dashboard/trucks">
+          <Truck size={18} weight="fill" /> <span>Trucks</span>
         </Link>
-        <Link className="sidebar-link" href="/dashboard/fleet/trailers">
-          <MapIcon style={{ fontSize: 18 }} /> <span>Trailers</span>
+        <Link className="sidebar-link" href="/dashboard/trailers">
+          <TruckTrailer size={18} weight="fill" /> <span>Trailers</span>
         </Link>
-        <Link className="sidebar-link" href="/dashboard/fleet/drivers">
-          <GroupIcon style={{ fontSize: 18 }} /> <span>Drivers</span>
+        <Link className="sidebar-link" href="/dashboard/drivers">
+          <Seatbelt size={18} weight="fill" /> <span>Drivers</span>
         </Link>
       </nav>
     </aside>
