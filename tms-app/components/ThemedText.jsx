@@ -30,6 +30,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: "600",
   },
+  h2: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: "600",
+  },
   title: {
     fontSize: 24,
     lineHeight: 26,

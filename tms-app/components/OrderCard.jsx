@@ -14,6 +14,18 @@ const OrderCard = ({ order = {}, onPress }) => {
     order.end_location || order.to || order.delivery || "end location";
   const status = order.status || order.state || "unknown";
 
+  const statusToVariant = {
+    pending: "planned",
+    planned: "planned",
+    moving: "moving",
+    in_transit: "moving",
+    completed: "completed",
+    done: "completed",
+    canceled: "canceled",
+    cancelled: "canceled",
+  };
+  const tagVariant = statusToVariant[String(status).toLowerCase()] || "planned";
+
   //temp for testing purposes
   const name = order.customerName || "Customer Name";
 
@@ -30,7 +42,7 @@ const OrderCard = ({ order = {}, onPress }) => {
         }}
       >
         <View>
-          <Tag>{status}</Tag>
+          <Tag variant={tagVariant} />
         </View>
         <View style={{ width: "100%", overflow: "clip" }}>
           <ThemedText>Order #{id}</ThemedText>
@@ -49,7 +61,7 @@ const OrderCard = ({ order = {}, onPress }) => {
           </View>
         </View>
         <View style={{ width: "100%", alignItems: "flex-end" }}>
-          <Tag style={{ width: "fit-content" }}>{status}</Tag>
+          <Tag variant="distance" style={{ width: "fit-content" }} />
         </View>
       </View>
     </TouchableOpacity>

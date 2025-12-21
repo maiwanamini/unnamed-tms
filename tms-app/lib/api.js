@@ -7,5 +7,6 @@ export const api = {
   users: `${API_URL}/users`,
   orders: `${API_URL}/orders`,
   stops: `${API_URL}/stops`,
+  companies: `${API_URL}/companies`,
   trucks: `${API_URL}/trucks`,
 };
