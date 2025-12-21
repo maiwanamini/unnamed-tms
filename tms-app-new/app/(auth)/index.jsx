@@ -15,10 +15,14 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      router.replace("/(tabs)");
+      const result = await login(email, password);
+      if (result.success) {
+        router.replace("/(tabs)");
+      } else {
+        setError("Invalid credentials");
+      }
     } catch (err) {
-      setError(err.message || "Login failed");
+      setError("Invalid credentials");
     } finally {
       setLoading(false);
     }
