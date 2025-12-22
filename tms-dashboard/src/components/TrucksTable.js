@@ -162,7 +162,7 @@ export default function TrucksTable({ trucks = [], drivers = [], trailers = [], 
                         className="assign-link"
                         onClick={() => setEditing({ id: t.id, field: "driver" })}
                       >
-                        <PersonAddAltOutlinedIcon style={{ fontSize: 18 }} />
+                        <PersonAddAltOutlinedIcon style={{ fontSize: 20 }} />
                         <span>{t.driverName || "Assign"}</span>
                       </button>
                     )}
@@ -194,7 +194,7 @@ export default function TrucksTable({ trucks = [], drivers = [], trailers = [], 
                         className="assign-link"
                         onClick={() => setEditing({ id: t.id, field: "trailer" })}
                       >
-                        <AddBoxOutlinedIcon style={{ fontSize: 18 }} />
+                        <AddBoxOutlinedIcon style={{ fontSize: 20 }} />
                         <span>{t.trailerName || "Assign"}</span>
                       </button>
                     )}
