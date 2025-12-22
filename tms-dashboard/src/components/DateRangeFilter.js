@@ -41,7 +41,7 @@ function formatMMDDYYYY(date) {
   const mm = pad2(date.getUTCMonth() + 1);
   const dd = pad2(date.getUTCDate());
   const yyyy = String(date.getUTCFullYear());
-  return `${mm}/${dd}/${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function monthLabel(date) {
@@ -156,7 +156,7 @@ export default function DateRangeFilter({ label = "Choose Date", value, onChange
     setDraftStart(value?.start ? startOfDayUTC(value.start) : null);
     setDraftEnd(value?.end ? startOfDayUTC(value.end) : null);
     setBaseMonth(startOfMonthUTC(value?.start ? startOfDayUTC(value.start) : nowUTC));
-  }, [nowUTC, value?.end, value?.start]);
+  }, [nowUTC, value]);
 
   useEffect(() => {
     function handleDoc(e) {
@@ -373,11 +373,11 @@ export default function DateRangeFilter({ label = "Choose Date", value, onChange
                 <div className="drp-inputs">
                   <div className="drp-input">
                     <div className="drp-input-label">Start Date</div>
-                    <input readOnly value={draftStart ? formatMMDDYYYY(draftStart) : ""} placeholder="MM / DD / YYYY" />
+                    <input readOnly value={draftStart ? formatMMDDYYYY(draftStart) : ""} placeholder="DD / MM / YYYY" />
                   </div>
                   <div className="drp-input">
                     <div className="drp-input-label">End Date</div>
-                    <input readOnly value={draftEnd ? formatMMDDYYYY(draftEnd) : ""} placeholder="MM / DD / YYYY" />
+                    <input readOnly value={draftEnd ? formatMMDDYYYY(draftEnd) : ""} placeholder="DD / MM / YYYY" />
                   </div>
                 </div>
 
