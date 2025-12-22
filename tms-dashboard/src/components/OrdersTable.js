@@ -142,19 +142,19 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
 
   // Fixed pixel widths to prevent column shrinking and keep header/body in sync
   const columnDefs = [
-    { key: "id", label: "ID", width: 120 },
-    { key: "customer", label: "Customer", width: 200 },
-    { key: "truck", label: "Truck", width: 120 },
-    { key: "driver", label: "Driver", width: 160 },
-    { key: "origin", label: "Origin", width: 240 },
-    { key: "destination", label: "Destination", width: 240 },
-    { key: "status", label: "Status", width: 120 },
+    { key: "id", label: "ID", width: '3rem' },
+    { key: "client", label: "Client", width: '3rem' },
+    { key: "truck", label: "Truck", width: '3rem' },
+    { key: "driver", label: "Driver", width: '3rem' },
+    { key: "origin", label: "Origin", width: '5rem' },
+    { key: "destination", label: "Destination", width: '5rem' },
+    { key: "status", label: "Status", width: '3rem' },
   ];
 
   return (
-    <div className="w-full">
-      {/* Vertical scroll container; the horizontal scroll comes from parent wrapper */}
-      <div className="table-wrapper" ref={wrapperRef}>
+    <div className="w-full" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      {/* Scroll container takes remaining height; body/header scroll together horizontally */}
+      <div className="table-wrapper" ref={wrapperRef} style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
         {/* Force a wider inner box so the wrapper shows a horizontal scrollbar when needed */}
         <div className="min-w-[1250px] inline-block align-top">
           <table className="orders-table w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
@@ -166,58 +166,42 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
           <thead className="sticky top-0 z-10 bg-white">
             <tr>
               {columnDefs.map((c) => (
-                <th key={c.key} style={{ textAlign: 'left', padding: '12px 8px', fontWeight: 600, fontSize: 13, color: '#0f172a', background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>{c.label}</th>
+                <th key={c.key} style={{ textAlign: 'left', padding: '8px 8px', fontWeight: 600, fontSize: 14, color: '#0f172a', background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>{c.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
-              if (r.type === "group") {
-                return (
-                  <tr key={r.key} className="orders-date-group">
-                    <td colSpan={columnDefs.length}>
-                      <div className="orders-date-divider">
-                        <span className="orders-date-pill">{r.label}</span>
-                        <span className="orders-date-line" />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }
-
-              const o = r.order;
-              return (
-                <tr
-                  key={r.key}
-                  onClick={() => setSelected(o)}
-                  className={selected?.id === o.id ? 'selected' : ''}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td style={{ padding: '12px 8px' }}>{o.id}</td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <div>{o.customer}</div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>#Reference</div>
-                  </td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <div>{o.truck}</div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>Truck</div>
-                  </td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <div>{o.driver}</div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>Phone</div>
-                  </td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <div>{o.origin}</div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>Date</div>
-                  </td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <div>{o.destination}</div>
-                    <div style={{ color: '#9ca3af', fontSize: 12 }}>Date</div>
-                  </td>
-                  <td style={{ padding: '12px 8px' }}><StatusPill status={o.status} /></td>
-                </tr>
-              );
-            })}
+            {getSlice().map((o) => (
+              <tr
+                key={o.id}
+                onClick={() => setSelected(o)}
+                className={selected?.id === o.id ? 'selected' : ''}
+                style={{ cursor: 'pointer' }}
+              >
+                <td style={{ padding: '8px 8px' }}>{o.id}</td>
+                <td style={{ padding: '8px 8px' }}>
+                  <div>{o.client}</div>
+                  <div style={{ color: '#9ca3af', fontSize: 14 }}>#Reference</div>
+                </td>
+                <td style={{ padding: '8px 8px' }}>
+                  <div>{o.truck}</div>
+                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Truck</div>
+                </td>
+                <td style={{ padding: '8px 8px' }}>
+                  <div>{o.driver}</div>
+                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Phone</div>
+                </td>
+                <td style={{ padding: '8px 8px' }}>
+                  <div>{o.origin}</div>
+                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Date</div>
+                </td>
+                <td style={{ padding: '8px 8px' }}>
+                  <div>{o.destination}</div>
+                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Date</div>
+                </td>
+                <td style={{ padding: '8px 8px' }}><StatusPill status={o.status} /></td>
+              </tr>
+            ))}
           </tbody>
           </table>
         </div>
