@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import fetcher from "../../lib/_fetcher";
 import { api } from "../../lib/api";
 import { ThemedText } from "../../components/ThemedText";
+import Tag from "../../components/Tag";
 import colors from "../../theme/colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { useState, useEffect } from "react";
@@ -188,6 +189,16 @@ export default function OrderDetail() {
             const isCurrentOrFirst =
               originalIndex === currentStopIndex || originalIndex === 0;
             const showOnLocationButton = isCurrentOrFirst || stop.completed;
+            const stopType = stop.type ? String(stop.type).toLowerCase() : null;
+            const stopTagVariant =
+              stopType === "pickup" || stopType === "pick-up"
+                ? "pickup"
+                : stopType === "dropoff" || stopType === "drop-off"
+                ? "dropoff"
+                : "planned";
+            const stopTagLabel = stop.type
+              ? stop.type.charAt(0).toUpperCase() + stop.type.slice(1)
+              : undefined;
 
             return (
               <View key={stop._id || index} style={styles.stopCard}>
@@ -220,6 +231,13 @@ export default function OrderDetail() {
                           "Location"}
                       </ThemedText>
                     </View>
+                    {stop.type ? (
+                      <Tag
+                        variant={stopTagVariant}
+                        label={stopTagLabel}
+                        style={styles.stopTypeTag}
+                      />
+                    ) : null}
                   </View>
 
                   <ThemedText style={styles.address}>
@@ -232,15 +250,6 @@ export default function OrderDetail() {
                       {stop.city && stop.postalCode ? ", " : ""}
                       {stop.postalCode}
                     </ThemedText>
-                  )}
-
-                  {stop.type && (
-                    <View style={styles.infoRow}>
-                      <ThemedText style={styles.label}>Type</ThemedText>
-                      <ThemedText style={styles.value}>
-                        {stop.type.charAt(0).toUpperCase() + stop.type.slice(1)}
-                      </ThemedText>
-                    </View>
                   )}
 
                   {stop.plannedTime && (
@@ -415,10 +424,17 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   stopHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
     marginBottom: 8,
   },
   stopHeaderLeft: {
     flex: 1,
+  },
+  stopTypeTag: {
+    flexShrink: 0,
   },
   companyNameStop: {
     fontSize: 16,
