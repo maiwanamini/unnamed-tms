@@ -3,7 +3,7 @@ import { fetcher } from "@/lib/fetcher";
 
 export function useCustomers() {
   const { data, error, isLoading, mutate } = useSWR(
-    "http://localhost:4000/customers",
+    "/customers",
     fetcher,
     {
       keepPreviousData: true,
