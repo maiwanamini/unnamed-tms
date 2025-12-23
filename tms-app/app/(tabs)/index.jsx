@@ -218,12 +218,15 @@ const Home = () => {
     return items;
   }, [currentOrder, currentOrderStops, upcomingOrders]);
 
-  const renderHeader = useCallback(
-    () => (
+  const renderHeader = useCallback(() => {
+    const greetingName = user?.firstName || user?.fullName || "";
+    return (
       <View style={{ gap: 24 }}>
         <View style={global.headerWrap}>
           <View style={global.textWrapMainLeft}>
-            <ThemedText>Welcome</ThemedText>
+            <ThemedText>{`Welcome${
+              greetingName ? `, ${greetingName}` : ""
+            }`}</ThemedText>
             <ThemedText>What's on the planning today?</ThemedText>
           </View>
           <View style={global.itemWrapper}>{/* profile image here */}</View>
@@ -239,9 +242,8 @@ const Home = () => {
           </View>
         </View>
       </View>
-    ),
-    []
-  );
+    );
+  }, [user]);
 
   const renderItem = useCallback(
     ({ item }) => {

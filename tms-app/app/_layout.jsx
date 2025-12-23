@@ -10,7 +10,8 @@ export default function RootLayout() {
         <Stack.Screen
           name="index"
           options={{
-            title: "The Unnamed TMS",
+            headerTitle: "The Unnamed TMS",
+            headerTitleStyle: { fontWeight: "400" },
             headerShown: true,
             headerTransparent: true,
             headerStyle: { backgroundColor: "transparent" },

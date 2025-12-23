@@ -37,7 +37,7 @@ const ContactCard = ({ companyId, contact }) => {
 
   const name = effectiveCompany?.name || "Company name";
   const info = effectiveCompany?.companyId
-    ? `MC: ${effectiveCompany.companyId}`
+    ? effectiveCompany.companyId
     : "Company information";
   const email = effectiveCompany?.email;
   const phone = effectiveCompany?.phone;
