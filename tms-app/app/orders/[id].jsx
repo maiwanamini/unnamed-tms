@@ -16,6 +16,7 @@ import { ThemedText } from "../../components/ThemedText";
 import Tag from "../../components/Tag";
 import colors from "../../theme/colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Entypo from "@expo/vector-icons/Entypo";
 import React, { useState, useEffect } from "react";
 
 export default function OrderDetail() {
@@ -140,7 +141,7 @@ export default function OrderDetail() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+          <Entypo name="chevron-small-left" size={24} color={colors.accent} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <ThemedText type="title" style={styles.orderId}>
