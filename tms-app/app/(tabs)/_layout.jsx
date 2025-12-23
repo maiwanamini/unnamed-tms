@@ -1,8 +1,14 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import colors from "../../theme/colors";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TabsLayout() {
+  const { token, loading } = useAuth();
+
+  if (loading) return null;
+  if (!token) return <Redirect href="/(auth)" />;
+
   return (
     <Tabs
       screenOptions={{
