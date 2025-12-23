@@ -16,8 +16,8 @@ export default function Sidebar() {
   const isDispatchActive = dispatchRoutes.has(pathname);
   const isFleetActive = fleetRoutes.has(pathname);
 
-  const [dispatchOpen, setDispatchOpen] = useState(isDispatchActive);
-  const [fleetOpen, setFleetOpen] = useState(isFleetActive);
+  const [dispatchOpen, setDispatchOpen] = useState(true);
+  const [fleetOpen, setFleetOpen] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [openFlyout, setOpenFlyout] = useState(null);
   const flyoutCloseTimerRef = useRef(null);
@@ -226,7 +226,16 @@ export default function Sidebar() {
           <button
             type="button"
             className="sidebar-collapse-btn"
-            onClick={() => setCollapsed((v) => !v)}
+            onClick={() => {
+              setCollapsed((v) => {
+                const next = !v;
+                if (!next) {
+                  setDispatchOpen(true);
+                  setFleetOpen(true);
+                }
+                return next;
+              });
+            }}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <span className="sidebar-collapse-icon" aria-hidden="true">

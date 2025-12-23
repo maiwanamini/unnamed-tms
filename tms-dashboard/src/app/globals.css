@@ -40,25 +40,54 @@ body {
 
 /* BUTTON DEFAULT STYLE */
 button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:not([class]) {
   background: #335CFE;
   color: white;
   padding: 10px 20px;
   border-radius: 4px;
   border: none;
-  cursor: pointer;
 }
-button:hover {
+button:not([class]):hover {
   opacity: 0.9;
 }
 
 /* INPUT FIELDS */
-input, select {
+input:not([class]), select:not([class]) {
   width: 100%;
   padding: 10px;
   margin-top: 6px;
   border-radius: 4px;
   background: #f7f7f7;
   border: 1px solid #ddd;
+}
+
+/* Auth forms (Login/Register) */
+.auth-input {
+  padding: 10px 16px;
+  padding-left: 12px;
+  line-height: 20px;
+}
+
+.auth-input--with-icon {
+  padding-right: 40px;
+}
+
+.auth-password-toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* SIDEBAR */
@@ -117,6 +146,9 @@ a {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  overflow-x: hidden;
+  transition: width 180ms ease, padding 180ms ease;
+  will-change: width;
 }
 
 .sidebar-shell.collapsed {
