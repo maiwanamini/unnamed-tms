@@ -35,11 +35,10 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     await AsyncStorage.removeItem("token");
     setToken(null);
-    // navigate to the auth flow so the user is outside the app
     try {
       router.replace("/(auth)");
     } catch (e) {
-      // router may not be available in some environments; ignore
+      // ignore navigation failures
     }
   };
 

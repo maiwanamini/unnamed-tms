@@ -43,7 +43,7 @@ const Home = () => {
   return (
     <SafeAreaView style={global.pageWrap}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ gap: 32 }}>

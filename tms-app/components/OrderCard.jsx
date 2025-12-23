@@ -23,10 +23,14 @@ const OrderCard = ({ order = {}, stops = [], onPress }) => {
     if (!dateString) return "--";
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString([], {
+      const dayName = date.toLocaleDateString([], { weekday: "short" });
+      const day = date.getDate();
+      const monthName = date.toLocaleDateString([], { month: "short" });
+      const time = date.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
+      return `${dayName} ${day} ${monthName}, ${time}`;
     } catch {
       return "--";
     }

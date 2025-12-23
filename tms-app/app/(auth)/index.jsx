@@ -31,7 +31,7 @@ export default function Login() {
   return (
     <View style={{ flex: 1, justifyContent: "center", padding: 20 }}>
       <Text>Email</Text>
-      <TextInput value={email} onChangeText={setEmail} />
+      <TextInput value={email} autoCapitalize="none" onChangeText={setEmail} />
 
       <Text>Password</Text>
       <TextInput value={password} onChangeText={setPassword} secureTextEntry />
