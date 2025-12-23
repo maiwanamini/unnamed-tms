@@ -23,8 +23,14 @@ export default function Sidebar() {
   const flyoutCloseTimerRef = useRef(null);
 
   useEffect(() => {
-    if (isDispatchActive) setDispatchOpen(true);
-    if (isFleetActive) setFleetOpen(true);
+    let t1 = null;
+    let t2 = null;
+    if (isDispatchActive) t1 = window.setTimeout(() => setDispatchOpen(true), 0);
+    if (isFleetActive) t2 = window.setTimeout(() => setFleetOpen(true), 0);
+    return () => {
+      if (t1) window.clearTimeout(t1);
+      if (t2) window.clearTimeout(t2);
+    };
   }, [isDispatchActive, isFleetActive]);
 
   useEffect(() => {

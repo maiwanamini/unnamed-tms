@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -56,6 +57,13 @@ export default function LoginPage() {
             >
               Sign in
             </button>
+
+            <div className="text-sm text-slate-600 text-center">
+              {"Don't have an account? "}
+              <Link href="/register" className="text-[var(--primary-blue)] font-medium">
+                Register
+              </Link>
+            </div>
 
             <div className="text-xs text-slate-500 text-center">
               Demo UI only — authentication not wired yet.
