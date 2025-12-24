@@ -18,7 +18,7 @@ const AllOrders = () => {
   const { token } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("upcoming");
 
   // Fetch all orders
   const { data: allOrders } = useSWR(
@@ -50,28 +50,59 @@ const AllOrders = () => {
   );
 
   // Categorize orders
-  const { activeOrders, uncompletedOrders, completedOrders } = useMemo(() => {
+  const { upcomingOrders, uncompletedOrders, completedOrders } = useMemo(() => {
     if (!allOrders)
-      return { activeOrders: [], uncompletedOrders: [], completedOrders: [] };
+      return { upcomingOrders: [], uncompletedOrders: [], completedOrders: [] };
 
-    const active = [];
+    const upcoming = [];
     const uncompleted = [];
     const completed = [];
+    const now = new Date();
+
+    // Helper to parse a stop date using plannedTime first
+    const parseStopDate = (stop) => {
+      const value =
+        stop?.plannedTime || stop?.scheduledArrival || stop?.scheduledDeparture;
+      if (!value) return null;
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    };
 
     allOrders.forEach((order) => {
       const stops = orderStopsMap[order._id] || [];
 
       if (order.status === "completed") {
         completed.push({ order, stops });
-      } else if (order.status === "moving") {
-        active.push({ order, stops });
+        return;
+      }
+
+      if (stops.length > 0) {
+        const firstStop = stops[0];
+        const lastStop = stops[stops.length - 1];
+
+        const firstStopDate = parseStopDate(firstStop);
+        const lastStopDate = parseStopDate(lastStop);
+
+        // If first stop is in the future, it's upcoming
+        if (firstStopDate && firstStopDate > now) {
+          upcoming.push({ order, stops });
+        }
+        // If last stop is in the past, it's uncompleted
+        else if (lastStopDate && lastStopDate < now) {
+          uncompleted.push({ order, stops });
+        }
+        // Otherwise it's current/in progress, or missing dates → uncompleted
+        else {
+          uncompleted.push({ order, stops });
+        }
       } else {
+        // No stops data yet, put in uncompleted
         uncompleted.push({ order, stops });
       }
     });
 
     return {
-      activeOrders: active,
+      upcomingOrders: upcoming,
       uncompletedOrders: uncompleted,
       completedOrders: completed,
     };
@@ -79,8 +110,8 @@ const AllOrders = () => {
 
   const currentData = useMemo(() => {
     switch (activeTab) {
-      case "active":
-        return activeOrders;
+      case "upcoming":
+        return upcomingOrders;
       case "uncompleted":
         return uncompletedOrders;
       case "completed":
@@ -88,7 +119,7 @@ const AllOrders = () => {
       default:
         return [];
     }
-  }, [activeTab, activeOrders, uncompletedOrders, completedOrders]);
+  }, [activeTab, upcomingOrders, uncompletedOrders, completedOrders]);
 
   const renderHeader = useCallback(
     () => (
@@ -110,16 +141,16 @@ const AllOrders = () => {
     () => (
       <View style={styles.tabsContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "active" && styles.activeTab]}
-          onPress={() => setActiveTab("active")}
+          style={[styles.tab, activeTab === "upcoming" && styles.activeTab]}
+          onPress={() => setActiveTab("upcoming")}
         >
           <ThemedText
             style={[
               styles.tabText,
-              activeTab === "active" && styles.activeTabText,
+              activeTab === "upcoming" && styles.activeTabText,
             ]}
           >
-            Active ({activeOrders.length})
+            Upcoming ({upcomingOrders.length})
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -152,7 +183,7 @@ const AllOrders = () => {
     ),
     [
       activeTab,
-      activeOrders.length,
+      upcomingOrders.length,
       uncompletedOrders.length,
       completedOrders.length,
     ]

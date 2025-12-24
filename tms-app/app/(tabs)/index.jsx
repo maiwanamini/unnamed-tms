@@ -278,7 +278,12 @@ const Home = () => {
           );
         case "upcomingHeading":
           return (
-            <View style={[global.sectionContainer, { paddingBottom: 8 }]}>
+            <View
+              style={[
+                global.sectionContainer,
+                { paddingBottom: 8, paddingTop: 32 },
+              ]}
+            >
               <View style={global.sectionHeading}>
                 <View style={global.hFlexTiny}>
                   <MaterialCommunityIcons
