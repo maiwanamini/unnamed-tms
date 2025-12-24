@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import fetcher from "../../lib/_fetcher";
 import { api } from "../../lib/api";
 import { ThemedText } from "../../components/ThemedText";
+import { ThemedButton } from "../../components/ThemedButton";
 import Tag from "../../components/Tag";
 import colors from "../../theme/colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -152,6 +153,13 @@ export default function OrderDetail() {
           </ThemedText>
         </View>
         <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.actionsRow}>
+        <ThemedButton
+          text="Add extra info"
+          onPress={() => router.push(`/orders/${id}/extra`)}
+        />
       </View>
 
       <ScrollView
@@ -339,6 +347,10 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: "center",
+  },
+  actionsRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   orderId: {
     fontSize: 18,
