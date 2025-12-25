@@ -221,13 +221,15 @@ const Home = () => {
   const renderHeader = useCallback(() => {
     const greetingName = user?.firstName || user?.fullName || "";
     return (
-      <View style={{ gap: 24 }}>
+      <View style={{ gap: 24, paddingTop: 16 }}>
         <View style={global.headerWrap}>
-          <View style={global.textWrapMainLeft}>
-            <ThemedText>{`Welcome${
+          <View style={global.textWrapMainLeftSmallest}>
+            <ThemedText style={{ fontWeight: "500" }}>{`Welcome${
               greetingName ? `, ${greetingName}` : ""
             }`}</ThemedText>
-            <ThemedText>What's on the planning today?</ThemedText>
+            <ThemedText style={global.faded}>
+              What's on the planning today?
+            </ThemedText>
           </View>
           <View style={global.itemWrapper}>{/* profile image here */}</View>
         </View>

@@ -49,7 +49,7 @@ const ContactCard = ({ companyId, contact }) => {
         backgroundColor: "white",
         paddingHorizontal: 16,
         paddingVertical: 14,
-        borderRadius: 16,
+        borderRadius: 8,
         justifyContent: "space-between",
         flexDirection: "row",
         alignItems: "center",
@@ -71,17 +71,17 @@ const ContactCard = ({ companyId, contact }) => {
           <ThemedText style={{ color: colors.muted }}>{info}</ThemedText>
         </View>
       </View>
-      <View style={[global.buttonWrapSmall, { columnGap: 12 }]}>
+      <View style={[global.buttonWrapSmall, { columnGap: 4 }]}>
         {email ? (
           <IconButton
-            icon={<MaterialIcons name="email" size={18} color={colors.text} />}
+            icon={<MaterialIcons name="email" size={18} color={colors.muted} />}
             href={`mailto:${email}`}
             accessibilityLabel={`Email ${email}`}
           />
         ) : null}
         {phone ? (
           <IconButton
-            icon={<MaterialIcons name="call" size={18} color={colors.text} />}
+            icon={<MaterialIcons name="call" size={18} color={colors.muted} />}
             href={`tel:${phone}`}
             accessibilityLabel={`Call ${phone}`}
           />
