@@ -6,6 +6,8 @@ import {
   TextInput,
   Alert,
   Image,
+  TouchableOpacity,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -19,64 +21,47 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import useSWR from "swr";
 import fetcher from "../../../lib/_fetcher";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-// Lightweight in-app time selector producing HH:mm without extra deps
+// Native time picker component using DateTimePicker
 const TimeSelector = ({ label, value, onChange }) => {
-  const parse = (v) => {
-    const m = String(v || "").match(/^(\d{1,2}):(\d{2})$/);
-    const h = m ? Math.max(0, Math.min(23, parseInt(m[1], 10))) : 0;
-    const mm = m ? Math.max(0, Math.min(59, parseInt(m[2], 10))) : 0;
-    return { h, mm };
+  // Parse HH:mm string to Date object
+  const parseTimeToDate = (timeStr) => {
+    const date = new Date();
+    if (timeStr) {
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (match) {
+        date.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+      }
+    } else {
+      date.setHours(0, 0, 0, 0);
+    }
+    return date;
   };
-  const { h, mm } = parse(value);
-  const setH = (nh) =>
-    onChange(`${String(nh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
-  const setM = (nm) =>
-    onChange(`${String(h).padStart(2, "0")}:${String(nm).padStart(2, "0")}`);
 
-  const inc = (cur, max, step = 1) => (cur + step) % (max + 1);
-  const dec = (cur, max, step = 1) => (cur - step + (max + 1)) % (max + 1);
+  // Convert Date object to HH:mm string
+  const formatDateToTime = (date) => {
+    const h = date.getHours();
+    const m = date.getMinutes();
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  const handleChange = (event, selectedDate) => {
+    if (selectedDate) {
+      onChange(formatDateToTime(selectedDate));
+    }
+  };
 
   return (
     <View style={styles.timeRow}>
       <ThemedText style={styles.label}>{label}</ThemedText>
-      <View style={styles.timeControls}>
-        <View style={styles.timeCol}>
-          <ThemedButton
-            size="small"
-            variant="outline"
-            text="▲"
-            onPress={() => setH(inc(h, 23))}
-          />
-          <ThemedText style={styles.timeValue}>
-            {String(h).padStart(2, "0")}
-          </ThemedText>
-          <ThemedButton
-            size="small"
-            variant="outline"
-            text="▼"
-            onPress={() => setH(dec(h, 23))}
-          />
-        </View>
-        <ThemedText style={styles.timeColon}>:</ThemedText>
-        <View style={styles.timeCol}>
-          <ThemedButton
-            size="small"
-            variant="outline"
-            text="▲"
-            onPress={() => setM(inc(mm, 59, 5))}
-          />
-          <ThemedText style={styles.timeValue}>
-            {String(mm).padStart(2, "0")}
-          </ThemedText>
-          <ThemedButton
-            size="small"
-            variant="outline"
-            text="▼"
-            onPress={() => setM(dec(mm, 59, 5))}
-          />
-        </View>
-      </View>
+      <DateTimePicker
+        value={parseTimeToDate(value)}
+        mode="time"
+        is24Hour={true}
+        display="default"
+        onChange={handleChange}
+      />
     </View>
   );
 };
@@ -112,6 +97,8 @@ const ExtraOrderInfo = () => {
   const [submitting, setSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [processingImage, setProcessingImage] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Fetch order to get base date for ISO time composition
   const { data: order } = useSWR(
@@ -119,9 +106,38 @@ const ExtraOrderInfo = () => {
     fetcher
   );
 
+  // Fetch clients list for dropdown
+  const {
+    data: clients = [],
+    error: clientsError,
+    isLoading: clientsLoading,
+  } = useSWR(token ? [`${api.clients}`, token] : null, fetcher);
+
   const setField = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  // Format kilometers with thousands separator
+  const formatKilometers = (value) => {
+    if (!value) return "";
+    return String(value)
+      .replace(/\D/g, "")
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  // Remove formatting from displayed value to get raw number
+  const parseKilometers = (formatted) => {
+    if (!formatted) return "";
+    return String(formatted).replace(/\D/g, "");
+  };
+
+  // Filter clients based on search query
+  const filteredClients = useMemo(() => {
+    if (!searchQuery.trim()) return clients;
+    return clients.filter((client) =>
+      client.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [clients, searchQuery]);
 
   const canGoNext = useMemo(() => {
     if (step === 0)
@@ -206,12 +222,46 @@ const ExtraOrderInfo = () => {
     }
   };
 
+  const clearImage = () => {
+    setField("documentUrl", "");
+    setImagePreview(null);
+  };
+
+  // Calculate total time from start and end times
+  const calculateTotalTime = () => {
+    if (!form.startTime || !form.endTime) return "-";
+    const parseTime = (timeStr) => {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const startMin = parseTime(form.startTime);
+    const endMin = parseTime(form.endTime);
+    let totalMin = endMin - startMin;
+    if (totalMin < 0) totalMin += 24 * 60; // Handle overnight
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  };
+
+  // Calculate total kilometers
+  const calculateTotalKm = () => {
+    if (form.startKilometers === "" || form.endKilometers === "") return "-";
+    const start = Number(form.startKilometers) || 0;
+    const end = Number(form.endKilometers) || 0;
+    const total = end - start;
+    return total >= 0 ? formatKilometers(String(total)) : "-";
+  };
+
   const goNext = () => {
     if (!canGoNext) return;
+    setShowDropdown(false);
     setStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
-  const goBack = () => setStep((prev) => Math.max(prev - 1, 0));
+  const goBack = () => {
+    setShowDropdown(false);
+    setStep((prev) => Math.max(prev - 1, 0));
+  };
 
   const handleSubmit = async () => {
     const toNumberIfValid = (value) => {
@@ -301,13 +351,71 @@ const ExtraOrderInfo = () => {
               Trip details
             </ThemedText>
             <ThemedText style={styles.label}>Driven for</ThemedText>
-            <TextInput
-              value={form.drivenForCompany}
-              onChangeText={(text) => setField("drivenForCompany", text)}
-              placeholder="Client / Company"
-              style={styles.input}
-              placeholderTextColor={colors.muted}
-            />
+            <View style={styles.dropdownWrapper}>
+              <TextInput
+                value={searchQuery || form.drivenForCompany}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => {
+                  setShowDropdown(true);
+                  if (form.drivenForCompany && !searchQuery) {
+                    setSearchQuery("");
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowDropdown(false), 200);
+                }}
+                placeholder="Search client / company"
+                style={styles.input}
+                placeholderTextColor={colors.muted}
+              />
+              <ThemedText style={styles.dropdownArrow}>▼</ThemedText>
+              {showDropdown && (
+                <View style={styles.dropdownList}>
+                  {clientsLoading ? (
+                    <View style={styles.dropdownItem}>
+                      <ThemedText style={styles.noResults}>
+                        Loading...
+                      </ThemedText>
+                    </View>
+                  ) : clientsError ? (
+                    <View style={styles.dropdownItem}>
+                      <ThemedText style={styles.noResults}>
+                        Error loading clients
+                      </ThemedText>
+                    </View>
+                  ) : filteredClients.length > 0 ? (
+                    <ScrollView
+                      style={styles.dropdownScroll}
+                      keyboardShouldPersistTaps="handled"
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {filteredClients.map((item) => (
+                        <TouchableOpacity
+                          key={item.id?.toString() || item.clientName}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setField("drivenForCompany", item.clientName);
+                            setSearchQuery("");
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <ThemedText>{item.clientName}</ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownItem}>
+                      <ThemedText style={styles.noResults}>
+                        No clients found
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
 
             <TimeSelector
               label="Start time"
@@ -330,9 +438,11 @@ const ExtraOrderInfo = () => {
             </ThemedText>
             <ThemedText style={styles.label}>Start kilometers</ThemedText>
             <TextInput
-              value={form.startKilometers}
-              onChangeText={(text) => setField("startKilometers", text)}
-              placeholder="e.g. 12345"
+              value={formatKilometers(form.startKilometers)}
+              onChangeText={(text) =>
+                setField("startKilometers", parseKilometers(text))
+              }
+              placeholder="e.g. 12.345"
               keyboardType="numeric"
               style={styles.input}
               placeholderTextColor={colors.muted}
@@ -340,9 +450,11 @@ const ExtraOrderInfo = () => {
 
             <ThemedText style={styles.label}>End kilometers</ThemedText>
             <TextInput
-              value={form.endKilometers}
-              onChangeText={(text) => setField("endKilometers", text)}
-              placeholder="e.g. 12999"
+              value={formatKilometers(form.endKilometers)}
+              onChangeText={(text) =>
+                setField("endKilometers", parseKilometers(text))
+              }
+              placeholder="e.g. 12.999"
               keyboardType="numeric"
               style={styles.input}
               placeholderTextColor={colors.muted}
@@ -383,9 +495,18 @@ const ExtraOrderInfo = () => {
             {imagePreview ? (
               <View style={styles.previewWrapper}>
                 <Image source={{ uri: imagePreview }} style={styles.preview} />
-                <ThemedText style={styles.helper}>
-                  Compressed preview
-                </ThemedText>
+                <View style={styles.previewActions}>
+                  <ThemedText style={styles.helper}>
+                    Compressed preview
+                  </ThemedText>
+                  <ThemedButton
+                    variant="outline"
+                    size="small"
+                    text="Clear"
+                    onPress={clearImage}
+                    style={styles.clearButton}
+                  />
+                </View>
               </View>
             ) : null}
           </View>
@@ -398,6 +519,25 @@ const ExtraOrderInfo = () => {
             <ThemedText type="subtitle" style={styles.cardTitle}>
               Review
             </ThemedText>
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryCardCol}>
+                <ThemedText style={styles.summaryCardLabel}>
+                  Total Hours
+                </ThemedText>
+                <ThemedText style={styles.summaryCardValue}>
+                  {calculateTotalTime()}
+                </ThemedText>
+              </View>
+              <View style={styles.summaryCardDivider} />
+              <View style={styles.summaryCardCol}>
+                <ThemedText style={styles.summaryCardLabel}>
+                  Total Distance
+                </ThemedText>
+                <ThemedText style={styles.summaryCardValue}>
+                  {calculateTotalKm()} km
+                </ThemedText>
+              </View>
+            </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Driven for</ThemedText>
               <ThemedText>{form.drivenForCompany || "-"}</ThemedText>
@@ -412,11 +552,15 @@ const ExtraOrderInfo = () => {
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Start km</ThemedText>
-              <ThemedText>{form.startKilometers || "-"}</ThemedText>
+              <ThemedText>
+                {formatKilometers(form.startKilometers) || "-"}
+              </ThemedText>
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>End km</ThemedText>
-              <ThemedText>{form.endKilometers || "-"}</ThemedText>
+              <ThemedText>
+                {formatKilometers(form.endKilometers) || "-"}
+              </ThemedText>
             </View>
             <View style={styles.summaryRow}>
               <ThemedText style={styles.summaryLabel}>Document</ThemedText>
@@ -618,23 +762,9 @@ const styles = StyleSheet.create({
   },
   timeRow: {
     marginTop: SPACING_SM,
-  },
-  timeControls: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-  },
-  timeCol: {
-    alignItems: "center",
-    gap: 6,
-  },
-  timeValue: {
-    fontSize: 18,
-    color: colors.text,
-  },
-  timeColon: {
-    fontSize: 18,
-    color: colors.text,
+    justifyContent: "space-between",
   },
   row: {
     flexDirection: "row",
@@ -653,10 +783,67 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.backgroundOnTop,
   },
+  dropdownWrapper: {
+    position: "relative",
+    zIndex: 1000,
+  },
+  dropdownArrow: {
+    position: "absolute",
+    right: SPACING_SM,
+    top: "50%",
+    transform: [{ translateY: -8 }],
+    color: colors.muted,
+    fontSize: 12,
+    pointerEvents: "none",
+  },
+  dropdownList: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    maxHeight: 200,
+    marginTop: 4,
+    backgroundColor: colors.backgroundOnTop,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: RADIUS_INPUT,
+    zIndex: 1001,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  flatList: {
+    maxHeight: 200,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    paddingHorizontal: SPACING_SM,
+    paddingVertical: SPACING_SM,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  noResults: {
+    color: colors.muted,
+    textAlign: "center",
+  },
   previewWrapper: {
     marginTop: SPACING_SM,
     alignItems: "flex-start",
     gap: 6,
+  },
+  previewActions: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING_SM,
+  },
+  clearButton: {
+    minWidth: 80,
   },
   preview: {
     width: "100%",
@@ -688,6 +875,38 @@ const styles = StyleSheet.create({
   summaryValue: {
     maxWidth: "65%",
   },
+  summaryHighlight: {
+    color: colors.accent,
+    fontWeight: "600",
+  },
+  summaryCard: {
+    flexDirection: "row",
+    backgroundColor: colors.background,
+    borderRadius: RADIUS_CARD,
+    overflow: "hidden",
+    marginBottom: SPACING_MD,
+  },
+  summaryCardCol: {
+    flex: 1,
+    paddingHorizontal: SPACING_MD,
+    paddingVertical: SPACING_MD,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  summaryCardDivider: {
+    width: 1,
+    backgroundColor: colors.backgroundOnTop,
+  },
+  summaryCardLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  summaryCardValue: {
+    fontSize: 22,
+    fontWeight: "600",
+    color: colors.text,
+  },
   editRow: {
     flexDirection: "row",
     gap: 8,
@@ -697,7 +916,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     paddingHorizontal: SPACING_MD,
-    paddingVertical: SPACING_SM,
+    paddingTop: SPACING_SM,
+    paddingBottom: 32,
     gap: SPACING_SM,
     borderTopWidth: 1,
     borderTopColor: colors.border,
