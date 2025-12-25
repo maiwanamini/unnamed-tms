@@ -11,11 +11,61 @@ export function toApiUrl(input) {
   return `${getApiBaseUrl()}/${url.replace(/^\/+/, "")}`;
 }
 
-export const fetcher = async (input) => {
-  const url = toApiUrl(input);
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url} (${res.status})`);
+export function getAuthToken() {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem("tms_token");
+  } catch {
+    return null;
   }
-  return res.json();
+}
+
+export async function apiFetch(input, init = {}) {
+  const url = toApiUrl(input);
+  const headers = new Headers(init.headers || {});
+
+  // Only attach Authorization when a token exists.
+  const token = getAuthToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  // Default JSON handling when body is a plain object.
+  let body = init.body;
+  if (body && typeof body === "object" && !(body instanceof FormData) && !(body instanceof Blob)) {
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    body = JSON.stringify(body);
+  }
+
+  let res;
+  try {
+    res = await fetch(url, { ...init, headers, body });
+  } catch (e) {
+    // Browser/network/CORS failures typically throw a TypeError like "Failed to fetch".
+    const base = getApiBaseUrl();
+    throw new Error(
+      `Failed to reach API (${url}). Check NEXT_PUBLIC_API_BASE_URL (currently ${base}) and confirm the backend is running and reachable.`
+    );
+  }
+  const contentType = res.headers.get("content-type") || "";
+
+  if (!res.ok) {
+    let details = "";
+    if (contentType.includes("application/json")) {
+      try {
+        const json = await res.json();
+        details = json?.message ? `: ${json.message}` : "";
+      } catch {
+        // ignore
+      }
+    }
+    throw new Error(`Request failed ${res.status} ${res.statusText}${details}`);
+  }
+
+  if (contentType.includes("application/json")) return res.json();
+  return res.text();
+}
+
+export const fetcher = async (input) => {
+  return apiFetch(input);
 };

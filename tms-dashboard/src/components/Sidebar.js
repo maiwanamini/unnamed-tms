@@ -64,6 +64,12 @@ export default function Sidebar() {
   const subLinkClass = (active) => `sidebar-sublink${active ? " active" : ""}`;
 
   const handleLogout = () => {
+    try {
+      window.localStorage.removeItem("tms_token");
+      window.localStorage.removeItem("tms_user");
+    } catch {
+      // ignore
+    }
     router.push("/");
   };
 

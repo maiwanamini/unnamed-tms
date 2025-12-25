@@ -103,6 +103,13 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
     return out;
   }, [page, rowsPerPage, sortedOrders, todayUTC, yesterdayUTC]);
 
+  const pageSlice = useMemo(() => {
+    if (rowsPerPage === Infinity) return sortedOrders;
+    const start = page * rowsPerPage;
+    const end = Math.min(start + rowsPerPage, sortedOrders.length);
+    return sortedOrders.slice(start, end);
+  }, [page, rowsPerPage, sortedOrders]);
+
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -171,7 +178,7 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
             </tr>
           </thead>
           <tbody>
-            {getSlice().map((o) => (
+            {pageSlice.map((o) => (
               <tr
                 key={o.id}
                 onClick={() => setSelected(o)}
@@ -180,7 +187,7 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
               >
                 <td style={{ padding: '8px 8px' }}>{o.id}</td>
                 <td style={{ padding: '8px 8px' }}>
-                  <div>{o.client}</div>
+                  <div>{o.customer ?? o.client}</div>
                   <div style={{ color: '#9ca3af', fontSize: 14 }}>#Reference</div>
                 </td>
                 <td style={{ padding: '8px 8px' }}>

@@ -6,6 +6,7 @@ import FiltersRow from "@/components/FiltersRow";
 import Card from "@/components/Card";
 import OrdersTable from "@/components/OrdersTable";
 import DetailPanel from "@/components/DetailPanel";
+import { useOrders } from "@/hooks/useOrders";
 
 function startOfDayUTC(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -33,21 +34,84 @@ const ALL_ORDERS = Array.from({ length: 50 }).map((_, i) => {
 
 
 export default function Page() {
+  const { orders: apiOrders } = useOrders();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(ALL_ORDERS[1]);
+  const [selected, setSelected] = useState(null);
   const [statusFilter, setStatusFilter] = useState([]);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
+
+  const mappedApiOrders = useMemo(() => {
+    const mapStatus = (s) => {
+      const v = String(s || "").toLowerCase();
+      if (v === "completed") return "Completed";
+      if (v === "cancelled" || v === "canceled") return "Canceled";
+      if (v === "in-progress" || v === "inprogress") return "Moving";
+      if (v === "assigned") return "Pending";
+      if (v === "pending") return "Pending";
+      return s || "Pending";
+    };
+
+    const toStop = (stop, orderNumber) => {
+      const planned = stop?.plannedTime ? new Date(stop.plannedTime) : null;
+      return {
+        id: stop?._id || stop?.id,
+        type: stop?.type === "pickup" ? "pickup" : "dropoff",
+        title: stop?.locationName || "",
+        address: stop?.address || "",
+        ref: orderNumber ? `#${orderNumber}` : "#Reference",
+        time: planned ? planned.toLocaleString() : "",
+        note: stop?.note || "",
+        status: stop?.completed ? "Completed" : "Pending",
+        orderIndex: stop?.orderIndex,
+      };
+    };
+
+    const toOrder = (o) => {
+      const orderNumber = o?.orderNumber || o?._id;
+      const stops = Array.isArray(o?.stops) ? [...o.stops] : [];
+      stops.sort((a, b) => (Number(a?.orderIndex) || 0) - (Number(b?.orderIndex) || 0));
+
+      const firstStopAddr = stops[0]?.address;
+      const lastStopAddr = stops.length ? stops[stops.length - 1]?.address : "";
+
+      return {
+        id: orderNumber,
+        customer: o?.customerName || "",
+        truck: o?.truck?.licensePlate || "",
+        driver: o?.driver?.fullName || "",
+        origin: firstStopAddr || o?.customerAddress || "",
+        destination: lastStopAddr || o?.customerAddress || "",
+        status: mapStatus(o?.status),
+        createdAt: o?.createdAt || o?.date,
+        stops: stops.map((s) => toStop(s, orderNumber)),
+      };
+    };
+
+    return (Array.isArray(apiOrders) ? apiOrders : []).map(toOrder);
+  }, [apiOrders]);
+
+  const sourceOrders = (mappedApiOrders?.length || 0) > 0 ? mappedApiOrders : ALL_ORDERS;
+
+  // Keep a selected order when data source changes.
+  // If the currently selected ID no longer exists, fall back to the first row.
+  const selectedId = selected?.id;
+  const resolvedSelected = useMemo(() => {
+    if (!sourceOrders.length) return null;
+    const match = selectedId ? sourceOrders.find((o) => o.id === selectedId) : null;
+    return match || sourceOrders[0];
+  }, [selectedId, sourceOrders]);
 
   const filtered = useMemo(() => {
     const start = dateRange?.start ? startOfDayUTC(new Date(dateRange.start)) : null;
     const end = dateRange?.end ? startOfDayUTC(new Date(dateRange.end)) : null;
 
-    return ALL_ORDERS.filter((o) => {
+    return sourceOrders.filter((o) => {
       // text search
       if (query) {
         const q = query.toLowerCase();
         const customer = (o.customer || "").toLowerCase();
-        if (!(o.id.toLowerCase().includes(q) || customer.includes(q) || o.driver.toLowerCase().includes(q))) {
+        const driver = String(o.driver || "").toLowerCase();
+        if (!(String(o.id || "").toLowerCase().includes(q) || customer.includes(q) || driver.includes(q))) {
           return false;
         }
       }
@@ -67,29 +131,46 @@ export default function Page() {
 
       return true;
     });
-  }, [dateRange, query, statusFilter]);
+  }, [dateRange, query, sourceOrders, statusFilter]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header (non-scrolling) */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, gap: 8, border: 'none', borderBottom: '1px solid #e5e7eb' }}>
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, padding: 16, gap: 8, border: "none", borderBottom: "1px solid #e5e7eb" }}>
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 0,
+          padding: 16,
+          gap: 8,
+          border: "none",
+          borderBottom: "1px solid #e5e7eb",
+        }}
+      >
         <div className="page-header">
           <h2>Orders</h2>
           <p>Manage and dispatch orders</p>
         </div>
-        <button className="btn-primary" style={{ width: 102, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: 0, flexShrink: 0 }}>
+        <button
+          className="btn-primary"
+          style={{
+            width: 102,
+            height: 40,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
           <AddIcon style={{ fontSize: 20 }} />
           <span style={{ fontWeight: 600, fontSize: 14 }}>NEW</span>
         </button>
       </div>
 
-      {/* Main content row: left (filters + table) and right (detail panel). Only these internal areas scroll. */}
-      <div className="flex flex-1 min-h-0">
-        {/* Left side: filters (fixed height) + table (scrolling) */}
-        <div className="flex flex-col flex-1 min-h-0" style={{ minWidth: 0 }}>
-          <Card className="card header-card" style={{ padding: 16, borderBottom: '1px solid #e5e7eb' }}>
       {/* Main two-column grid: left table (flexible) + right detail (fixed range) */}
       <div
         className="dashboard-main"
@@ -97,16 +178,14 @@ export default function Page() {
           display: "grid",
           gridTemplateColumns: "minmax(0,2fr) minmax(320px,380px)",
           gap: 0,
-          alignItems: "start",
-          height: '100%',
+          flex: "1 1 0%",
           minHeight: 0,
-          overflow: 'hidden'
+          overflow: "hidden",
         }}
       >
-        {/* Left column: filters + horizontally scrollable table container */}
-        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+        {/* Left column: filters + table */}
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
           <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
-            {/* Responsive wrapper for filter controls to prevent cropping */}
             <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
               <FiltersRow
                 query={query}
@@ -118,20 +197,21 @@ export default function Page() {
               />
             </div>
           </Card>
-          <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* OrdersTable internally scrolls its rows; footer stays visible at bottom of card */}
 
-          {/* Table card; the inner table wrapper handles horizontal scroll */}
-          <Card className="card card-no-hpad" style={{ minWidth: 0, padding: 0, display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}>
-            <OrdersTable orders={filtered} selected={selected} setSelected={setSelected} />
+          <Card
+            className="card card-no-hpad flex-1 min-h-0"
+            style={{ minWidth: 0, padding: 0, display: "flex", flexDirection: "column" }}
+          >
+            <OrdersTable orders={filtered} selected={resolvedSelected} setSelected={setSelected} />
           </Card>
         </div>
 
-        {/* Right side: sticky detail panel; aside no border line */}
-        <aside className="w-[360px] flex flex-col bg-white" style={{ flexShrink: 0, overflowX: 'hidden' }}>
-        {/* Right column: detail panel within fixed width constraints */}
-        <div style={{ width: "100%", height: '100%', minHeight: 0, overflow: 'hidden' }}>
-          <DetailPanel selected={selected} />
+        {/* Right column: detail panel */}
+        <aside
+          className="w-full flex flex-col bg-white min-h-0"
+          style={{ flexShrink: 0, height: "100%", overflow: "hidden" }}
+        >
+          <DetailPanel selected={resolvedSelected} />
         </aside>
       </div>
     </div>

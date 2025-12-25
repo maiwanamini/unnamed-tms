@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toApiUrl } from "@/lib/fetcher";
+import { apiFetch } from "@/lib/fetcher";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
 
 export default function RegisterPage() {
@@ -31,21 +31,16 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(toApiUrl("/auth/register"), {
+      const data = await apiFetch("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, password }),
+        body: { firstName, lastName, email, password },
       });
 
-      if (!res.ok) {
-        let message = `Registration failed (${res.status})`;
-        try {
-          const data = await res.json();
-          message = data?.message || data?.error || message;
-        } catch {
-          // ignore JSON parse errors
-        }
-        throw new Error(message);
+      if (data?.token) {
+        window.localStorage.setItem("tms_token", data.token);
+      }
+      if (data?.user) {
+        window.localStorage.setItem("tms_user", JSON.stringify(data.user));
       }
 
       router.push("/dashboard/orders");

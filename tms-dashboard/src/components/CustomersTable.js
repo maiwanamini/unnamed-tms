@@ -118,7 +118,7 @@ export default function CustomersTable({ customers = [] }) {
                       textAlign: "left",
                       padding: "12px 8px",
                       fontWeight: 600,
-                      fontSize: 13,
+                      fontSize: 14,
                       color: "#0f172a",
                       background: "#ffffff",
                       borderBottom: "1px solid #e5e7eb",

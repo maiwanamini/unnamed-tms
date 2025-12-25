@@ -147,6 +147,8 @@ a {
   flex-direction: column;
   gap: 14px;
   overflow-x: hidden;
+  position: relative;
+  z-index: 100;
   transition: width 180ms ease, padding 180ms ease;
   will-change: width;
 }
@@ -155,6 +157,8 @@ a {
   width: 76px;
   padding: 16px 10px;
   align-items: center;
+  /* Allow the hover flyout to render outside the sidebar */
+  overflow: visible;
 }
 
 .sidebar-top {
@@ -432,7 +436,7 @@ a {
   padding: 6px 10px;
   border-radius: 8px;
   white-space: nowrap;
-  z-index: 60;
+  z-index: 210;
   pointer-events: none;
 }
 
@@ -460,7 +464,7 @@ a {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 16px rgba(15,23,42,0.15);
-  z-index: 50;
+  z-index: 200;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1319,9 +1323,9 @@ a {
   flex: 1 1 auto;
 }
 .card.card-no-hpad .table-wrapper {
-  /* Adjustable offset so footer sits higher above bottom of viewport. */
-  --orders-table-offset: 196px; /* increase this value to move footer further up */
-  max-height: calc(var(--vh, 1vh) * 100 - var(--orders-table-offset) - var(--table-footer-height));
+  /* Let the parent flex layout determine height so the table footer remains visible
+     and the scroll area always fits within the main viewport. */
+  max-height: none;
   /* Fill remaining height and scroll internally (vertical + horizontal) */
   flex: 1 1 0;
   min-height: 0;
@@ -1592,7 +1596,8 @@ a {
   padding: 16px 16px 16px 16px;
   position: sticky;
   top: 0;
-  max-height: 100vh;
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden; /* prevent horizontal scroll; keep fixed width */
   border-left: 1px solid #e5e7eb; /* restored separator to match other borders */
@@ -1607,9 +1612,9 @@ a {
 }
 
 /* Native table styling for OrdersTable */
-.orders-table { font-size: 13px; }
-.orders-table th { font-size: 13px; }
-.orders-table td { font-size: 13px; }
+.orders-table { font-size: 14px; }
+.orders-table th { font-size: 14px; }
+.orders-table td { font-size: 14px; }
 .orders-table th,
 .orders-table td { vertical-align: middle; }
 .orders-table tbody tr:not(.orders-date-group):nth-child(even) { background: #f3f4f6; }

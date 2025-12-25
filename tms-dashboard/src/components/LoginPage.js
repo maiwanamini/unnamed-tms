@@ -4,17 +4,37 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
+import { apiFetch } from "@/lib/fetcher";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const onSubmit = (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
-    // TODO: wire up real auth; for now, proceed into the dashboard.
-    router.push("/dashboard/orders");
+    setError("");
+    setSubmitting(true);
+    try {
+      const data = await apiFetch("/auth/login", {
+        method: "POST",
+        body: { email, password },
+      });
+      if (data?.token) {
+        window.localStorage.setItem("tms_token", data.token);
+      }
+      if (data?.user) {
+        window.localStorage.setItem("tms_user", JSON.stringify(data.user));
+      }
+      router.push("/dashboard/orders");
+    } catch (e) {
+      setError(e?.message || "Sign-in failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -27,6 +47,12 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-6">
+            {error ? (
+              <div className="text-sm text-red-600" role="alert">
+                {error}
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-0">
               <label className="block text-sm font-medium text-slate-700">Email</label>
               <input
@@ -66,8 +92,9 @@ export default function LoginPage() {
             <button
               type="submit"
               className="w-full h-11 rounded-lg bg-[var(--primary-blue)] text-white font-semibold"
+              disabled={submitting}
             >
-              Sign in
+              {submitting ? "Signing in…" : "Sign in"}
             </button>
 
             <div className="text-sm text-slate-600 text-center">

@@ -5,10 +5,13 @@ import { useOverlay } from "@/hooks/useOverlay";
 import { useCustomers } from "@/hooks/useCustomers";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
+import { apiFetch } from "@/lib/fetcher";
 
 export default function NewCustomerForm() {
   const { closeOverlay } = useOverlay();
   const { mutate } = useCustomers();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const initial = {
     name: "",
@@ -26,16 +29,27 @@ export default function NewCustomerForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      await apiFetch("/clients", {
+        method: "POST",
+        body: {
+          clientName: form.name,
+          clientAddress: form.address,
+          contactName: form.contactName,
+          contactPhone: form.phone,
+          contactEmail: form.email,
+        },
+      });
 
-    await fetch("http://localhost:4000/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    // refresh SWR cache
-    mutate();
-    closeOverlay();
+      await mutate();
+      closeOverlay();
+    } catch (e) {
+      setError(e?.message || "Failed to create customer");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const clearAll = () => setForm(initial);
@@ -56,6 +70,12 @@ export default function NewCustomerForm() {
       </div>
 
       <div className="overlay-body">
+        {error ? (
+          <div className="text-sm text-red-600" role="alert" style={{ padding: "0 16px" }}>
+            {error}
+          </div>
+        ) : null}
+
         <div className="overlay-section">
           <div className="overlay-section-title">1. General</div>
 
@@ -114,8 +134,8 @@ export default function NewCustomerForm() {
         <button type="button" className="btn-outline" onClick={closeOverlay}>
           Cancel
         </button>
-        <button type="submit" className="btn-primary overlay-primary">
-          Create
+        <button type="submit" className="btn-primary overlay-primary" disabled={submitting}>
+          {submitting ? "Creating…" : "Create"}
         </button>
       </div>
     </form>
