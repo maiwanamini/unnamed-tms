@@ -8,5 +8,6 @@ export const api = {
   orders: `${API_URL}/orders`,
   stops: `${API_URL}/stops`,
   companies: `${API_URL}/companies`,
+  clients: `${API_URL}/clients`,
   trucks: `${API_URL}/trucks`,
 };
