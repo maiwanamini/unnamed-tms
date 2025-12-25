@@ -26,7 +26,7 @@ export default function TabsLayout() {
                 onPress?.(e);
               }}
               onLongPress={(e) => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(
                   () => {}
                 );
                 onLongPress?.(e);

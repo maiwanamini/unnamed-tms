@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { View, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import * as Haptics from "expo-haptics";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -142,7 +143,10 @@ const AllOrders = () => {
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === "upcoming" && styles.activeTab]}
-          onPress={() => setActiveTab("upcoming")}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab("upcoming");
+          }}
         >
           <ThemedText
             style={[
@@ -155,7 +159,10 @@ const AllOrders = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === "uncompleted" && styles.activeTab]}
-          onPress={() => setActiveTab("uncompleted")}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab("uncompleted");
+          }}
         >
           <ThemedText
             style={[
@@ -168,7 +175,10 @@ const AllOrders = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === "completed" && styles.activeTab]}
-          onPress={() => setActiveTab("completed")}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab("completed");
+          }}
         >
           <ThemedText
             style={[

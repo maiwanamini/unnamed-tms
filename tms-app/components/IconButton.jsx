@@ -97,7 +97,7 @@ export default function IconButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 999,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
   },
