@@ -38,29 +38,39 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const response = await fetch(`${api.users}/me`, {
+      const userId = user._id || user.id;
+      const response = await fetch(`${api.users}/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          email: editEmail,
-        }),
+        body: JSON.stringify({ email: editEmail }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to update profile");
-        setLoading(false);
+        let errorMessage = "Failed to update profile";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage =
+            response.statusText || `Server error (${response.status})`;
+        }
+        setError(errorMessage);
         return;
       }
 
+      await response.json();
       setSuccess("Profile updated successfully");
       setEditMode(false);
-      setLoading(false);
     } catch (err) {
-      setError("An error occurred while updating your profile");
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : "An error occurred while updating your profile";
+      setError(errorMsg);
+    } finally {
       setLoading(false);
     }
   };
@@ -133,6 +143,9 @@ const Settings = () => {
                   onChangeText={setEditEmail}
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   placeholder="Enter email"
                   placeholderTextColor={colors.muted}
                   editable={!loading}
