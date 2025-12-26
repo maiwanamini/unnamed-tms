@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FiltersRow from "@/components/FiltersRow";
 import Card from "@/components/Card";
@@ -106,12 +106,6 @@ export default function Page() {
     if (!selectedId) return null;
     return mappedApiOrders.find((o) => o.id === selectedId) || null;
   }, [selectedId, mappedApiOrders]);
-
-  useEffect(() => {
-    if (selectedId && !resolvedSelected) {
-      setSelected(null);
-    }
-  }, [selectedId, resolvedSelected]);
 
   const filtered = useMemo(() => {
     const start = dateRange?.start ? startOfDayLocal(new Date(dateRange.start)) : null;

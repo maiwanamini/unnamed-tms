@@ -116,7 +116,8 @@ export default function NewDriverForm() {
             <input
               className="overlay-input"
               placeholder="Enter password"
-              type="password"
+              type="text"
+              autoComplete="new-password"
               value={form.password}
               onChange={(e) => update("password", e.target.value)}
               required
