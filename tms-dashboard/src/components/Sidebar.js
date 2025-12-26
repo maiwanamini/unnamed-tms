@@ -13,6 +13,7 @@ export default function Sidebar() {
 
   const [companyName, setCompanyName] = useState("");
   const [companyId, setCompanyId] = useState("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
 
   useEffect(() => {
     // 1) Seed from cached user for instant paint.
@@ -24,9 +25,11 @@ export default function Sidebar() {
         if (c && typeof c === "object") {
           const nextName = String(c?.name || "");
           const nextId = String(c?.companyId || c?._id || "");
+          const nextLogo = String(c?.logoUrl || "");
           Promise.resolve().then(() => {
             setCompanyName(nextName);
             setCompanyId(nextId);
+            setCompanyLogoUrl(nextLogo);
           });
         }
       }
@@ -48,6 +51,7 @@ export default function Sidebar() {
         if (c) {
           setCompanyName(String(c?.name || ""));
           setCompanyId(String(c?.companyId || c?._id || ""));
+          setCompanyLogoUrl(String(c?.logoUrl || ""));
         }
       })
       .catch(() => null);
@@ -125,7 +129,12 @@ export default function Sidebar() {
       <div className="sidebar-top">
         <div className="sidebar-company">
           <div className="sidebar-company-icon" aria-hidden="true">
-            <UserCircle className="sidebar-company-avatar" weight="fill" />
+            {companyLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={companyLogoUrl} alt="" className="sidebar-company-avatar" />
+            ) : (
+              <UserCircle className="sidebar-company-avatar" weight="fill" />
+            )}
           </div>
           {!collapsed && (
             <div className="sidebar-company-text">

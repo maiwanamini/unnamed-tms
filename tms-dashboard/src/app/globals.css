@@ -205,6 +205,9 @@ a {
   width: 34px;
   height: 34px;
   color: #e5e7eb;
+  border-radius: 9999px;
+  object-fit: cover;
+  display: block;
 }
 
 .sidebar-shell.collapsed .sidebar-company-icon {
