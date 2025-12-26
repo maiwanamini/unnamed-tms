@@ -68,7 +68,9 @@ const ContactCard = ({ companyId, contact }) => {
           <ThemedText type="h2" style={{ marginBottom: 2 }}>
             {name}
           </ThemedText>
-          <ThemedText style={{ color: colors.muted }}>{info}</ThemedText>
+          <ThemedText style={{ color: colors.muted }}>
+            {`DOT:${info}`}
+          </ThemedText>
         </View>
       </View>
       <View style={[global.buttonWrapSmall, { columnGap: 4 }]}>
