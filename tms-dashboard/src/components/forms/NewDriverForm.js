@@ -28,15 +28,48 @@ export default function NewDriverForm() {
   };
 
   const [form, setForm] = useState(initial);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+
+  const isValidEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || "").trim());
 
   const update = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "firstName" || field === "lastName" || field === "email" || field === "phone" || field === "password") {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const clearAll = () => setForm(initial);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setFormError("");
+    setFieldErrors({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+
+    const nextErrors = { firstName: "", lastName: "", email: "", phone: "", password: "" };
+    if (!String(form.firstName || "").trim()) nextErrors.firstName = "Please enter a first name.";
+    if (!String(form.lastName || "").trim()) nextErrors.lastName = "Please enter a last name.";
+    if (!String(form.email || "").trim()) nextErrors.email = "Please enter an email address.";
+    else if (!isValidEmail(form.email)) nextErrors.email = "Please enter a valid email address.";
+    if (!String(form.password || "").trim()) nextErrors.password = "Please enter a password.";
+
+    const hasErrors = Object.values(nextErrors).some(Boolean);
+    if (hasErrors) {
+      setFieldErrors(nextErrors);
+      return;
+    }
+
+    setSubmitting(true);
 
     const payload = {
       firstName: form.firstName,
@@ -46,15 +79,53 @@ export default function NewDriverForm() {
       password: form.password,
     };
 
-    const created = await apiFetch("/users", { method: "POST", body: payload });
-    const createdUserId = created?.user?._id || created?.user?.id;
+    try {
+      const created = await apiFetch("/users", { method: "POST", body: payload });
+      const createdUserId = created?.user?._id || created?.user?.id;
 
-    if (form.truckId && createdUserId) {
-      await apiFetch(`/trucks/${form.truckId}`, { method: "PUT", body: { driver: createdUserId } });
+      if (form.truckId && createdUserId) {
+        await apiFetch(`/trucks/${form.truckId}`, { method: "PUT", body: { driver: createdUserId } });
+      }
+
+      await afterSave?.();
+      closeOverlay();
+    } catch (e) {
+      const message = String(e?.data?.message || e?.message || "Failed to create driver");
+      const field = String(e?.data?.field || "");
+      const code = String(e?.data?.code || "");
+
+      if (field === "email" || code === "EMAIL_IN_USE" || /email already in use/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, email: "This email is already in use." }));
+        return;
+      }
+
+      if (field === "phone" || code === "PHONE_IN_USE" || /phone already in use/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, phone: "This phone number is already in use." }));
+        return;
+      }
+
+      // Fallback: map common backend required-field message.
+      if (/firstName/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, firstName: "Please enter a first name." }));
+        return;
+      }
+      if (/lastName/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, lastName: "Please enter a last name." }));
+        return;
+      }
+      if (/\bemail\b/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, email: "Please enter a valid email address." }));
+        return;
+      }
+      if (/password/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, password: "Please enter a password." }));
+        return;
+      }
+
+      setFormError(message);
+    } finally {
+      setSubmitting(false);
     }
-
-    await afterSave?.();
-    closeOverlay();
   };
 
   return (
@@ -73,6 +144,12 @@ export default function NewDriverForm() {
       </div>
 
       <div className="overlay-body">
+        {formError ? (
+          <div className="text-sm text-red-600" role="alert" style={{ padding: "0 16px" }}>
+            {formError}
+          </div>
+        ) : null}
+
         <div className="overlay-section">
           <div className="overlay-section-title">1. General</div>
 
@@ -84,6 +161,7 @@ export default function NewDriverForm() {
               value={form.firstName}
               onChange={(e) => update("firstName", e.target.value)}
             />
+            {fieldErrors.firstName ? <div className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</div> : null}
           </div>
 
           <div className="overlay-field">
@@ -94,11 +172,13 @@ export default function NewDriverForm() {
               value={form.lastName}
               onChange={(e) => update("lastName", e.target.value)}
             />
+            {fieldErrors.lastName ? <div className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</div> : null}
           </div>
 
           <div className="overlay-field">
             <label>Driver Phone</label>
             <PhoneInput value={form.phone} onChange={(v) => update("phone", v)} />
+            {fieldErrors.phone ? <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div> : null}
           </div>
 
           <div className="overlay-field">
@@ -109,6 +189,7 @@ export default function NewDriverForm() {
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
             />
+            {fieldErrors.email ? <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div> : null}
           </div>
 
           <div className="overlay-field">
@@ -120,8 +201,8 @@ export default function NewDriverForm() {
               autoComplete="new-password"
               value={form.password}
               onChange={(e) => update("password", e.target.value)}
-              required
             />
+            {fieldErrors.password ? <div className="text-xs text-red-600 mt-1">{fieldErrors.password}</div> : null}
           </div>
         </div>
 
@@ -148,8 +229,8 @@ export default function NewDriverForm() {
         <button type="button" className="btn-outline" onClick={closeOverlay}>
           Cancel
         </button>
-        <button type="submit" className="btn-primary overlay-primary">
-          Create
+        <button type="submit" className="btn-primary overlay-primary" disabled={submitting}>
+          {submitting ? "Creating…" : "Create"}
         </button>
       </div>
     </form>

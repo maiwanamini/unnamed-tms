@@ -1,18 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetcher";
 
 export default function CreateCompanyPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [companyId, setCompanyId] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const logoInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", phone: "" });
+
+  const isValidEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || "").trim());
 
   useEffect(() => {
     try {
@@ -27,15 +32,45 @@ export default function CreateCompanyPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl("");
+      return;
+    }
+    const next = URL.createObjectURL(logoFile);
+    setLogoPreviewUrl(next);
+    return () => {
+      URL.revokeObjectURL(next);
+    };
+  }, [logoFile]);
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    const next = { name: "", email: "", phone: "" };
+    if (!String(name || "").trim()) next.name = "Please enter a company name.";
+    if (!String(email || "").trim()) next.email = "Please enter a company email.";
+    else if (!isValidEmail(email)) next.email = "Please enter a valid email address.";
+    if (!String(phone || "").trim()) next.phone = "Please enter a phone number.";
+    setFieldErrors(next);
+
+    const hasErrors = Object.values(next).some(Boolean);
+    if (hasErrors) return;
+
     setSubmitting(true);
 
     try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("phone", phone);
+      if (String(address || "").trim()) formData.append("address", address);
+      if (logoFile) formData.append("logo", logoFile);
+
       const data = await apiFetch("/companies", {
         method: "POST",
-        body: { name, companyId, email, phone, address },
+        body: formData,
       });
 
       if (data?.user) {
@@ -64,28 +99,67 @@ export default function CreateCompanyPage() {
           </div>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="block text-sm font-medium text-slate-700">Company Logo (Optional)</label>
+              <div className="flex items-center gap-4">
+                {logoPreviewUrl ? (
+                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logoPreviewUrl} alt="Company logo" className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 rounded-lg border border-slate-200 bg-slate-50" aria-hidden="true" />
+                )}
+
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={logoInputRef}
+                    className="hidden"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                      setLogoFile(file);
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide"
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    UPLOAD IMAGE
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!logoFile}
+                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide disabled:opacity-60"
+                    onClick={() => {
+                      setLogoFile(null);
+                      if (logoInputRef.current) logoInputRef.current.value = "";
+                    }}
+                  >
+                    REMOVE
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">*.png, *.jpg, *.jpeg files up to 10MB</div>
+            </div>
+
             <div className="flex flex-col gap-0">
               <label className="block text-sm font-medium text-slate-700">Company name</label>
               <input
                 className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setFieldErrors((p) => ({ ...p, name: "" }));
+                }}
                 placeholder="Company name"
-                required
               />
-            </div>
-
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Company ID</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="text"
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                placeholder="Company ID"
-                required
-              />
+              {fieldErrors.name ? <div className="text-xs text-red-600 mt-1">{fieldErrors.name}</div> : null}
             </div>
 
             <div className="flex flex-col gap-0">
@@ -94,10 +168,13 @@ export default function CreateCompanyPage() {
                 className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldErrors((p) => ({ ...p, email: "" }));
+                }}
                 placeholder="company@email.com"
-                required
               />
+              {fieldErrors.email ? <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div> : null}
             </div>
 
             <div className="flex flex-col gap-0">
@@ -106,10 +183,13 @@ export default function CreateCompanyPage() {
                 className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setFieldErrors((p) => ({ ...p, phone: "" }));
+                }}
                 placeholder="Phone"
-                required
               />
+              {fieldErrors.phone ? <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div> : null}
             </div>
 
             <div className="flex flex-col gap-0">

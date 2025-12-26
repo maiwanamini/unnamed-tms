@@ -120,6 +120,7 @@ export default function NewOrderForm() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({ customerId: "", stopByKey: {} });
 
   const [touched, setTouched] = useState({ truck: false, driver: false, trailer: false });
 
@@ -332,7 +333,13 @@ export default function NewOrderForm() {
     setForm((prev) => ({ ...prev, truckId: trailerTruckId }));
   }, [selectedTrailer, touched.truck]);
 
-  const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const setField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "customerId") {
+      setFieldErrors((prev) => ({ ...prev, customerId: "" }));
+    }
+  };
 
   const setTruckId = (value, source = "user") => {
     if (source === "user") setTouched((p) => ({ ...p, truck: true }));
@@ -352,6 +359,7 @@ export default function NewOrderForm() {
   const clearAll = () => {
     setError("");
     setSubmitting(false);
+    setFieldErrors({ customerId: "", stopByKey: {} });
     setTouched({ truck: false, driver: false, trailer: false });
     setForm({ customerId: "", reference: "", truckId: "", trailerId: "", driverId: "" });
     setStops([makeStop()]);
@@ -359,6 +367,18 @@ export default function NewOrderForm() {
 
   const updateStop = (key, patch) => {
     setStops((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
+
+    const stopPatch = patch || {};
+    const keys = Object.keys(stopPatch);
+    if (keys.includes("locationName") || keys.includes("address")) {
+      setFieldErrors((prev) => {
+        const current = prev.stopByKey?.[key] || {};
+        const nextStop = { ...current };
+        if (keys.includes("locationName")) nextStop.locationName = "";
+        if (keys.includes("address")) nextStop.address = "";
+        return { ...prev, stopByKey: { ...(prev.stopByKey || {}), [key]: nextStop } };
+      });
+    }
   };
 
   const moveStop = (key, delta) => {
@@ -379,24 +399,34 @@ export default function NewOrderForm() {
   };
 
   const validate = () => {
-    if (!form.customerId) return "Customer is required";
+    const next = { customerId: "", stopByKey: {} };
+
+    if (!form.customerId) {
+      next.customerId = "Please select a customer.";
+    }
+
     for (let i = 0; i < stops.length; i++) {
       const s = stops[i];
-      if (!String(s.locationName || "").trim()) return `Stop ${i + 1}: Location name is required`;
-      if (!String(s.address || "").trim()) return `Stop ${i + 1}: Location address is required`;
+      const stopErr = { locationName: "", address: "" };
+      if (!String(s.locationName || "").trim()) stopErr.locationName = "Please enter a location name.";
+      if (!String(s.address || "").trim()) stopErr.address = "Please enter a location address.";
+      if (stopErr.locationName || stopErr.address) {
+        next.stopByKey[s.key] = stopErr;
+      }
     }
-    return "";
+
+    setFieldErrors(next);
+    const hasCustomerError = Boolean(next.customerId);
+    const hasStopErrors = Object.keys(next.stopByKey || {}).length > 0;
+    return !(hasCustomerError || hasStopErrors);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const message = validate();
-    if (message) {
-      setError(message);
-      return;
-    }
+    const ok = validate();
+    if (!ok) return;
 
     setSubmitting(true);
 
@@ -501,6 +531,7 @@ export default function NewOrderForm() {
                 showCaret
                 alwaysShowSearch
               />
+              {fieldErrors.customerId ? <div className="text-xs text-red-600 mt-1">{fieldErrors.customerId}</div> : null}
             </div>
 
             <div>
@@ -697,6 +728,9 @@ export default function NewOrderForm() {
                     value={s.address}
                     onChange={(e) => updateStop(s.key, { address: e.target.value })}
                   />
+                  {fieldErrors.stopByKey?.[s.key]?.address ? (
+                    <div className="text-xs text-red-600 mt-1">{fieldErrors.stopByKey[s.key].address}</div>
+                  ) : null}
                 </div>
 
                 <div>
@@ -707,6 +741,9 @@ export default function NewOrderForm() {
                     value={s.locationName}
                     onChange={(e) => updateStop(s.key, { locationName: e.target.value })}
                   />
+                  {fieldErrors.stopByKey?.[s.key]?.locationName ? (
+                    <div className="text-xs text-red-600 mt-1">{fieldErrors.stopByKey[s.key].locationName}</div>
+                  ) : null}
                 </div>
               </div>
 

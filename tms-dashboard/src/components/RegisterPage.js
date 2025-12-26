@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetcher";
@@ -16,8 +16,31 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const avatarInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const initials = useMemo(() => {
+    const f = String(firstName || "").trim();
+    const l = String(lastName || "").trim();
+    const a = f ? f[0].toUpperCase() : "";
+    const b = l ? l[0].toUpperCase() : "";
+    return `${a}${b}` || "?";
+  }, [firstName, lastName]);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl("");
+      return;
+    }
+    const next = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(next);
+    return () => {
+      URL.revokeObjectURL(next);
+    };
+  }, [avatarFile]);
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -31,9 +54,16 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const formData = new FormData();
+      formData.append("firstName", firstName);
+      formData.append("lastName", lastName);
+      formData.append("email", email);
+      formData.append("password", password);
+      if (avatarFile) formData.append("avatar", avatarFile);
+
       const data = await apiFetch("/auth/register", {
         method: "POST",
-        body: { firstName, lastName, email, password },
+        body: formData,
       });
 
       if (data?.token) {
@@ -69,6 +99,54 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="block text-sm font-medium text-slate-700">Profile Picture (Optional)</label>
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 font-semibold">
+                  {avatarPreviewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarPreviewUrl} alt="Profile picture" className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={avatarInputRef}
+                    className="hidden"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                      setAvatarFile(file);
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide"
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    UPLOAD IMAGE
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!avatarFile}
+                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide disabled:opacity-60"
+                    onClick={() => {
+                      setAvatarFile(null);
+                      if (avatarInputRef.current) avatarInputRef.current.value = "";
+                    }}
+                  >
+                    REMOVE
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">*.png, *.jpg, *.jpeg files up to 10MB</div>
+            </div>
+
             <div className="flex flex-col gap-0">
               <label className="block text-sm font-medium text-slate-700">First name</label>
               <input

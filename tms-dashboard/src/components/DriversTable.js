@@ -189,7 +189,7 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
                     ) : (
                       <button type="button" className="assign-link" onClick={() => setEditing({ id: d.id, field: "truck" })}>
                         {d.truckName ? null : <AddBoxOutlinedIcon style={{ fontSize: 18 }} />}
-                        {d.truckName ? <span>{d.truckName}</span> : null}
+                        {d.truckName ? <span>{d.truckName}</span> : <span>Add truck</span>}
                       </button>
                     )}
                   </td>
