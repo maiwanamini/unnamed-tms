@@ -1,20 +1,49 @@
-import React, { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import global from "../../styles/global";
+import * as Localization from "expo-localization";
+import { useRouter } from "expo-router";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { useEffect, useState } from "react";
 import {
-  View,
-  StyleSheet,
   Pressable,
-  TextInput,
   ScrollView,
-  ActivityIndicator,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ThemedButton } from "../../components/ThemedButton";
 import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
-import { ThemedButton } from "../../components/ThemedButton";
-import { useRouter } from "expo-router";
-import colors from "../../theme/colors";
 import { api } from "../../lib/api";
+import global from "../../styles/global";
+import colors from "../../theme/colors";
+
+const normalizePhone = (input) => (input || "").replace(/\D+/g, "");
+const getRegion = () => {
+  try {
+    const locales = Localization.getLocales?.();
+    const region =
+      locales && locales.length > 0
+        ? locales[0].regionCode
+        : Localization.region;
+    return (region || "US").toUpperCase();
+  } catch {
+    return "US";
+  }
+};
+const formatPhone = (input) => {
+  const region = getRegion();
+  const digits = normalizePhone(input);
+  if (!digits) return "";
+  const hasPlus = (input || "").trim().startsWith("+");
+  const parseInput = hasPlus ? `+${digits}` : digits;
+  try {
+    const p = parsePhoneNumberFromString(parseInput, region);
+    if (p) {
+      return hasPlus ? p.formatInternational() : p.formatNational();
+    }
+  } catch {}
+  return digits;
+};
 
 const Settings = () => {
   const { logout, user, token } = useAuth();
@@ -22,13 +51,18 @@ const Settings = () => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editEmail, setEditEmail] = useState(user?.email || "");
+  const [editPhone, setEditPhone] = useState(
+    user?.phone ? formatPhone(user.phone) : ""
+  );
   const [emailFocused, setEmailFocused] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     if (user) {
       setEditEmail(user.email || "");
+      setEditPhone(formatPhone(user.phone || ""));
     }
   }, [user]);
 
@@ -38,14 +72,20 @@ const Settings = () => {
     setSuccess(null);
 
     try {
+      const emailToSend = (editEmail || "").trim();
+      if (!emailToSend) {
+        setError("Email is required");
+        return;
+      }
       const userId = user._id || user.id;
+      const phoneToSend = (editPhone || "").trim() || "";
       const response = await fetch(`${api.users}/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email: editEmail }),
+        body: JSON.stringify({ email: emailToSend, phone: phoneToSend }),
       });
 
       if (!response.ok) {
@@ -73,6 +113,14 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showFullName = editMode || !!user?.fullName;
+  const showEmail = editMode || !!(user?.email || editEmail);
+  const showPhone = editMode || !!(user?.phone || editPhone);
+
+  const handleClearPhone = () => {
+    setEditPhone("");
   };
 
   return (
@@ -113,7 +161,7 @@ const Settings = () => {
           </View>
           <View style={styles.accountCard}>
             {/* Full Name (Display Only) */}
-            {user?.fullName && (
+            {showFullName && (
               <View
                 style={[styles.accountItem, editMode && styles.disabledField]}
               >
@@ -125,67 +173,88 @@ const Settings = () => {
             )}
 
             {/* Email */}
-            <View
-              style={[
-                styles.accountItem,
-                user?.fullName && styles.accountItemBorder,
-              ]}
-            >
-              <ThemedText style={styles.accountLabel}>Email</ThemedText>
-              {editMode ? (
-                <TextInput
-                  style={[
-                    styles.accountValue,
-                    { paddingVertical: 3.5 },
-                    emailFocused && { borderBottomColor: colors.accent },
-                  ]}
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholder="Enter email"
-                  placeholderTextColor={colors.muted}
-                  editable={!loading}
-                />
-              ) : (
-                <ThemedText
-                  style={[styles.accountValue, { paddingVertical: 0 }]}
-                >
-                  {editEmail}
-                </ThemedText>
-              )}
-            </View>
-
-            {/* Name (Display Only) */}
-            {user?.name && (
+            {showEmail && (
               <View
                 style={[
                   styles.accountItem,
-                  styles.accountItemBorder,
-                  editMode && styles.disabledField,
+                  showFullName && styles.accountItemBorder,
                 ]}
               >
-                <ThemedText style={styles.accountLabel}>Name</ThemedText>
-                <ThemedText style={styles.accountValue}>{user.name}</ThemedText>
+                <ThemedText style={styles.accountLabel}>Email</ThemedText>
+                {editMode ? (
+                  <TextInput
+                    style={[
+                      styles.accountValue,
+                      { paddingVertical: 3.5 },
+                      emailFocused && { borderBottomColor: colors.accent },
+                    ]}
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholder="Enter email"
+                    placeholderTextColor={colors.muted}
+                    editable={!loading}
+                  />
+                ) : (
+                  <ThemedText
+                    style={[styles.accountValue, { paddingVertical: 0 }]}
+                  >
+                    {editEmail}
+                  </ThemedText>
+                )}
               </View>
             )}
 
-            {/* Phone (Display Only) */}
-            {user?.phone && (
+            {/* Phone */}
+            {showPhone && (
               <View
                 style={[
                   styles.accountItem,
-                  styles.accountItemBorder,
-                  editMode && styles.disabledField,
+                  (showFullName || showEmail) && styles.accountItemBorder,
                 ]}
               >
                 <ThemedText style={styles.accountLabel}>Phone</ThemedText>
-                <ThemedText style={styles.accountValue}>
-                  {user.phone}
-                </ThemedText>
+                {editMode ? (
+                  <View>
+                    <TextInput
+                      style={[
+                        styles.accountValue,
+                        { paddingVertical: 3.5 },
+                        phoneFocused && { borderBottomColor: colors.accent },
+                      ]}
+                      value={editPhone}
+                      onChangeText={(text) => {
+                        setEditPhone(formatPhone(text));
+                      }}
+                      onFocus={() => setPhoneFocused(true)}
+                      onBlur={() => setPhoneFocused(false)}
+                      keyboardType="phone-pad"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      placeholder="Enter phone"
+                      placeholderTextColor={colors.muted}
+                      editable={!loading}
+                    />
+
+                    <Pressable
+                      onPress={handleClearPhone}
+                      disabled={loading}
+                      style={{ marginTop: 8 }}
+                    >
+                      <ThemedText style={styles.editLink}>Clear</ThemedText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <ThemedText
+                    style={[styles.accountValue, { paddingVertical: 0 }]}
+                  >
+                    {editPhone}
+                  </ThemedText>
+                )}
               </View>
             )}
           </View>
@@ -206,6 +275,7 @@ const Settings = () => {
                   setEditMode(false);
                   setError(null);
                   setEditEmail(user?.email || "");
+                  setEditPhone(formatPhone(user?.phone || ""));
                 }}
                 disabled={loading}
               >
