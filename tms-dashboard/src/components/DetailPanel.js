@@ -20,6 +20,18 @@ export default function DetailPanel({ selected }) {
     { id: 4, type: 'dropoff', title: 'Address Name', address: 'Address', ref: '#Reference', time: 'Date, Time', note: 'Notes', status: 'Canceled' },
   ];
 
+  const driverName = selected?.driver && selected.driver !== "Driver" ? String(selected.driver) : "";
+  const driverPhone = selected?.driverPhone ? String(selected.driverPhone) : "";
+  const driverAvatarUrl = selected?.driverAvatarUrl ? String(selected.driverAvatarUrl) : "";
+  const driverInitials = driverName
+    ? driverName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase())
+        .join("")
+    : "";
+
   return (
     <aside className="detail-panel">
       <div className="header">
@@ -47,15 +59,31 @@ export default function DetailPanel({ selected }) {
 
       <div style={{ marginTop: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 99, background: "#111827", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}><PersonIcon /></div>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 99,
+              background: "#111827",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            {driverAvatarUrl ? (
+              <img src={driverAvatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : driverInitials ? (
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{driverInitials}</span>
+            ) : (
+              <PersonIcon />
+            )}
+          </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 16 }}>Driver</div>
-            {/* If the provided driver value is literally 'Driver', suppress it to avoid duplicate lines */}
-            {selected?.driver && selected.driver !== 'Driver' ? (
-              <div style={{ color: "#6b7280", fontSize: 14 }}>{selected.driver}</div>
-            ) : null}
-            {/* Phone styled the same as Plate */}
-            <div style={{ color: "#6b7280", fontSize: 14 }}>Phone</div>
+            <div style={{ fontWeight: 600, fontSize: 16 }}>{driverName || "Driver"}</div>
+            <div style={{ color: "#6b7280", fontSize: 14 }}>{driverPhone || ""}</div>
           </div>
         </div>
       </div>

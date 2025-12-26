@@ -1,40 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FiltersRow from "@/components/FiltersRow";
 import Card from "@/components/Card";
 import OrdersTable from "@/components/OrdersTable";
 import DetailPanel from "@/components/DetailPanel";
 import { useOrders } from "@/hooks/useOrders";
+import { useOverlay } from "@/hooks/useOverlay";
 
 function startOfDayUTC(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-const MOCK_ORDERS = [
-  { id: "O-01", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-02", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-03", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Moving" },
-  { id: "O-04", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-05", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-06", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Pending" },
-  { id: "O-07", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-08", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-09", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Completed" },
-  { id: "O-10", customer: "Customer name", truck: "Plate", driver: "Driver", origin: "Address Origin", destination: "Address Destination", status: "Canceled" },
-];
-
-// Expand mock orders so we can test scrolling
-const ALL_ORDERS = Array.from({ length: 50 }).map((_, i) => {
-  const base = MOCK_ORDERS[i % MOCK_ORDERS.length];
-  const createdAt = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString();
-  return { ...base, id: `O-${String(i + 1).padStart(2, "0")}`, createdAt };
-});
+function startOfDayLocal(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
 
 
 export default function Page() {
   const { orders: apiOrders } = useOrders();
+  const { openOverlay } = useOverlay();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [statusFilter, setStatusFilter] = useState([]);
@@ -51,14 +37,14 @@ export default function Page() {
       return s || "Pending";
     };
 
-    const toStop = (stop, orderNumber) => {
+    const toStop = (stop) => {
       const planned = stop?.plannedTime ? new Date(stop.plannedTime) : null;
       return {
         id: stop?._id || stop?.id,
         type: stop?.type === "pickup" ? "pickup" : "dropoff",
         title: stop?.locationName || "",
         address: stop?.address || "",
-        ref: orderNumber ? `#${orderNumber}` : "#Reference",
+        ref: stop?.reference ? String(stop.reference) : "",
         time: planned ? planned.toLocaleString() : "",
         note: stop?.note || "",
         status: stop?.completed ? "Completed" : "Pending",
@@ -71,41 +57,67 @@ export default function Page() {
       const stops = Array.isArray(o?.stops) ? [...o.stops] : [];
       stops.sort((a, b) => (Number(a?.orderIndex) || 0) - (Number(b?.orderIndex) || 0));
 
+      const safeDate = (v) => {
+        if (!v) return null;
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? null : d;
+      };
+
+      const firstStopPlanned = safeDate(stops[0]?.plannedTime);
+      const lastStopPlanned = safeDate(stops.length ? stops[stops.length - 1]?.plannedTime : null);
+      const earliestPlanned = stops.reduce((min, s) => {
+        const d = safeDate(s?.plannedTime);
+        if (!d) return min;
+        if (!min) return d;
+        return d.getTime() < min.getTime() ? d : min;
+      }, null);
+
+      const tableDate = earliestPlanned || safeDate(o?.date) || safeDate(o?.createdAt);
+
       const firstStopAddr = stops[0]?.address;
       const lastStopAddr = stops.length ? stops[stops.length - 1]?.address : "";
 
       return {
         id: orderNumber,
         customer: o?.customerName || "",
+        reference: o?.reference || "",
         truck: o?.truck?.licensePlate || "",
         driver: o?.driver?.fullName || "",
+        driverPhone: o?.driver?.phone || "",
+        driverAvatarUrl:
+          o?.driver?.avatarUrl || o?.driver?.profileImageUrl || o?.driver?.photoUrl || o?.driver?.imageUrl || "",
         origin: firstStopAddr || o?.customerAddress || "",
         destination: lastStopAddr || o?.customerAddress || "",
+        originDate: firstStopPlanned ? firstStopPlanned.toLocaleDateString() : "",
+        destinationDate: lastStopPlanned ? lastStopPlanned.toLocaleDateString() : "",
         status: mapStatus(o?.status),
         createdAt: o?.createdAt || o?.date,
-        stops: stops.map((s) => toStop(s, orderNumber)),
+        tableDate: tableDate ? tableDate.toISOString() : (o?.createdAt || o?.date),
+        stops: stops.map((s) => toStop(s)),
       };
     };
 
     return (Array.isArray(apiOrders) ? apiOrders : []).map(toOrder);
   }, [apiOrders]);
 
-  const sourceOrders = (mappedApiOrders?.length || 0) > 0 ? mappedApiOrders : ALL_ORDERS;
-
-  // Keep a selected order when data source changes.
-  // If the currently selected ID no longer exists, fall back to the first row.
+  // Keep selection if possible; otherwise clear selection (no auto-select).
   const selectedId = selected?.id;
   const resolvedSelected = useMemo(() => {
-    if (!sourceOrders.length) return null;
-    const match = selectedId ? sourceOrders.find((o) => o.id === selectedId) : null;
-    return match || sourceOrders[0];
-  }, [selectedId, sourceOrders]);
+    if (!selectedId) return null;
+    return mappedApiOrders.find((o) => o.id === selectedId) || null;
+  }, [selectedId, mappedApiOrders]);
+
+  useEffect(() => {
+    if (selectedId && !resolvedSelected) {
+      setSelected(null);
+    }
+  }, [selectedId, resolvedSelected]);
 
   const filtered = useMemo(() => {
-    const start = dateRange?.start ? startOfDayUTC(new Date(dateRange.start)) : null;
-    const end = dateRange?.end ? startOfDayUTC(new Date(dateRange.end)) : null;
+    const start = dateRange?.start ? startOfDayLocal(new Date(dateRange.start)) : null;
+    const end = dateRange?.end ? startOfDayLocal(new Date(dateRange.end)) : null;
 
-    return sourceOrders.filter((o) => {
+    return mappedApiOrders.filter((o) => {
       // text search
       if (query) {
         const q = query.toLowerCase();
@@ -123,7 +135,7 @@ export default function Page() {
 
       // date filter (empty = all)
       if (start && end) {
-        const t = startOfDayUTC(new Date(o.createdAt)).getTime();
+        const t = startOfDayLocal(new Date(o.tableDate || o.createdAt)).getTime();
         const a = Math.min(start.getTime(), end.getTime());
         const b = Math.max(start.getTime(), end.getTime());
         if (t < a || t > b) return false;
@@ -131,7 +143,7 @@ export default function Page() {
 
       return true;
     });
-  }, [dateRange, query, sourceOrders, statusFilter]);
+  }, [dateRange, query, mappedApiOrders, statusFilter]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -165,6 +177,7 @@ export default function Page() {
             padding: 0,
             flexShrink: 0,
           }}
+          onClick={() => openOverlay("order")}
         >
           <AddIcon style={{ fontSize: 20 }} />
           <span style={{ fontWeight: 600, fontSize: 14 }}>NEW</span>
@@ -176,7 +189,9 @@ export default function Page() {
         className="dashboard-main"
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0,2fr) minmax(320px,380px)",
+          gridTemplateColumns: resolvedSelected
+            ? "minmax(0,2fr) minmax(320px,380px)"
+            : "minmax(0,1fr)",
           gap: 0,
           flex: "1 1 0%",
           minHeight: 0,
@@ -207,12 +222,14 @@ export default function Page() {
         </div>
 
         {/* Right column: detail panel */}
-        <aside
-          className="w-full flex flex-col bg-white min-h-0"
-          style={{ flexShrink: 0, height: "100%", overflow: "hidden" }}
-        >
-          <DetailPanel selected={resolvedSelected} />
-        </aside>
+        {resolvedSelected ? (
+          <aside
+            className="w-full flex flex-col bg-white min-h-0"
+            style={{ flexShrink: 0, height: "100%", overflow: "hidden" }}
+          >
+            <DetailPanel selected={resolvedSelected} />
+          </aside>
+        ) : null}
       </div>
     </div>
   );

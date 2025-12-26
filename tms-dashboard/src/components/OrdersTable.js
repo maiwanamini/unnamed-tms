@@ -4,22 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import TableFooter from "@/components/TableFooter";
 import StatusPill from "@/components/StatusPill";
 
-function startOfDayUTC(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+function startOfDayLocal(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function isSameDayUTC(a, b) {
+function isSameDayLocal(a, b) {
   if (!a || !b) return false;
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function formatShortDateUTC(date) {
+function formatShortDateLocal(date) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+  return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 export default function OrdersTable({ orders = [], selected, setSelected }) {
@@ -27,12 +23,12 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
 
-  const todayUTC = useMemo(() => startOfDayUTC(new Date()), []);
-  const yesterdayUTC = useMemo(() => {
-    const d = new Date(todayUTC.getTime());
-    d.setUTCDate(d.getUTCDate() - 1);
-    return startOfDayUTC(d);
-  }, [todayUTC]);
+  const todayLocal = useMemo(() => startOfDayLocal(new Date()), []);
+  const yesterdayLocal = useMemo(() => {
+    const d = new Date(todayLocal.getTime());
+    d.setDate(d.getDate() - 1);
+    return startOfDayLocal(d);
+  }, [todayLocal]);
 
   const sortedOrders = useMemo(() => {
     const norm = (s) => {
@@ -56,9 +52,9 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
     };
 
     const dayKey = (o) => {
-      const raw = o?.createdAt;
+      const raw = o?.tableDate || o?.createdAt || o?.date;
       const parsed = raw ? new Date(raw) : new Date();
-      return startOfDayUTC(parsed).getTime();
+      return startOfDayLocal(parsed).getTime();
     };
 
     return orders
@@ -72,26 +68,26 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
       .map((x) => x.o);
   }, [orders]);
 
-  const rows = useMemo(() => {
-    const slice = (() => {
-      if (rowsPerPage === Infinity) return sortedOrders;
-      const start = page * rowsPerPage;
-      const end = Math.min(start + rowsPerPage, sortedOrders.length);
-      return sortedOrders.slice(start, end);
-    })();
+  const pageSlice = useMemo(() => {
+    if (rowsPerPage === Infinity) return sortedOrders;
+    const start = page * rowsPerPage;
+    const end = Math.min(start + rowsPerPage, sortedOrders.length);
+    return sortedOrders.slice(start, end);
+  }, [page, rowsPerPage, sortedOrders]);
 
+  const groupedRows = useMemo(() => {
     const labelFor = (o) => {
-      const raw = o?.createdAt;
+      const raw = o?.tableDate || o?.createdAt || o?.date;
       const parsed = raw ? new Date(raw) : new Date();
-      const day = startOfDayUTC(parsed);
-      if (isSameDayUTC(day, todayUTC)) return "Today";
-      if (isSameDayUTC(day, yesterdayUTC)) return "Yesterday";
-      return formatShortDateUTC(day);
+      const day = startOfDayLocal(parsed);
+      if (isSameDayLocal(day, todayLocal)) return "Today";
+      if (isSameDayLocal(day, yesterdayLocal)) return "Yesterday";
+      return formatShortDateLocal(day);
     };
 
     const out = [];
     let lastLabel = null;
-    for (const o of slice) {
+    for (const o of pageSlice) {
       const label = labelFor(o);
       if (label !== lastLabel) {
         out.push({ type: "group", key: `g-${label}`, label });
@@ -99,16 +95,8 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
       }
       out.push({ type: "order", key: o.id, order: o });
     }
-
     return out;
-  }, [page, rowsPerPage, sortedOrders, todayUTC, yesterdayUTC]);
-
-  const pageSlice = useMemo(() => {
-    if (rowsPerPage === Infinity) return sortedOrders;
-    const start = page * rowsPerPage;
-    const end = Math.min(start + rowsPerPage, sortedOrders.length);
-    return sortedOrders.slice(start, end);
-  }, [page, rowsPerPage, sortedOrders]);
+  }, [pageSlice, todayLocal, yesterdayLocal]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -178,37 +166,55 @@ export default function OrdersTable({ orders = [], selected, setSelected }) {
             </tr>
           </thead>
           <tbody>
-            {pageSlice.map((o) => (
-              <tr
-                key={o.id}
-                onClick={() => setSelected(o)}
-                className={selected?.id === o.id ? 'selected' : ''}
-                style={{ cursor: 'pointer' }}
-              >
-                <td style={{ padding: '8px 8px' }}>{o.id}</td>
-                <td style={{ padding: '8px 8px' }}>
-                  <div>{o.customer ?? o.client}</div>
-                  <div style={{ color: '#9ca3af', fontSize: 14 }}>#Reference</div>
-                </td>
-                <td style={{ padding: '8px 8px' }}>
-                  <div>{o.truck}</div>
-                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Truck</div>
-                </td>
-                <td style={{ padding: '8px 8px' }}>
-                  <div>{o.driver}</div>
-                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Phone</div>
-                </td>
-                <td style={{ padding: '8px 8px' }}>
-                  <div>{o.origin}</div>
-                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Date</div>
-                </td>
-                <td style={{ padding: '8px 8px' }}>
-                  <div>{o.destination}</div>
-                  <div style={{ color: '#9ca3af', fontSize: 14 }}>Date</div>
-                </td>
-                <td style={{ padding: '8px 8px' }}><StatusPill status={o.status} /></td>
-              </tr>
-            ))}
+            {groupedRows.map((row) => {
+              if (row.type === "group") {
+                return (
+                  <tr key={row.key} className="orders-date-group" aria-hidden="true">
+                    <td colSpan={columnDefs.length}>
+                      <div className="orders-date-divider">
+                        <span className="orders-date-pill">{row.label}</span>
+                        <span className="orders-date-line" />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              const o = row.order;
+              const refText = String(o.reference || "").trim();
+              const refDisplay = refText ? (refText.startsWith("#") ? refText : `#${refText}`) : "";
+              return (
+                <tr
+                  key={row.key}
+                  onClick={() => setSelected(o)}
+                  className={selected?.id === o.id ? 'selected' : ''}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td style={{ padding: '8px 8px' }}>{o.id}</td>
+                  <td style={{ padding: '8px 8px' }}>
+                    <div>{o.customer ?? o.client}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 14 }}>{refDisplay}</div>
+                  </td>
+                  <td style={{ padding: '8px 8px' }}>
+                    <div>{o.truck}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 14 }}>{""}</div>
+                  </td>
+                  <td style={{ padding: '8px 8px' }}>
+                    <div>{o.driver}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 14 }}>{o.driverPhone || ""}</div>
+                  </td>
+                  <td style={{ padding: '8px 8px' }}>
+                    <div>{o.origin}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 14 }}>{o.originDate || ""}</div>
+                  </td>
+                  <td style={{ padding: '8px 8px' }}>
+                    <div>{o.destination}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 14 }}>{o.destinationDate || ""}</div>
+                  </td>
+                  <td style={{ padding: '8px 8px' }}><StatusPill status={o.status} /></td>
+                </tr>
+              );
+            })}
           </tbody>
           </table>
         </div>

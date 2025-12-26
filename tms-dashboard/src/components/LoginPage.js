@@ -29,7 +29,16 @@ export default function LoginPage() {
       if (data?.user) {
         window.localStorage.setItem("tms_user", JSON.stringify(data.user));
       }
-      router.push("/dashboard/orders");
+
+      const role = String(data?.user?.role || "admin");
+      const hasCompany = Boolean(data?.user?.company);
+      if (role === "driver") {
+        router.push("/unauthorized");
+      } else if (!hasCompany) {
+        router.push("/create-company");
+      } else {
+        router.push("/dashboard/orders");
+      }
     } catch (e) {
       setError(e?.message || "Sign-in failed");
     } finally {

@@ -8,40 +8,11 @@ import Filter from "@/components/Filter";
 import SortByFilter from "@/components/SortByFilter";
 import DriversTable from "@/components/DriversTable";
 import { useOverlay } from "@/hooks/useOverlay";
+import { useUsers } from "@/hooks/useUsers";
+import { useTrucks } from "@/hooks/useTrucks";
+import { apiFetch } from "@/lib/fetcher";
 
-const PLACEHOLDER_TRUCKS = [
-  { id: "TR-01", name: "Truck" },
-  { id: "TR-02", name: "Truck" },
-  { id: "TR-03", name: "Truck" },
-];
-
-const PLACEHOLDER_DRIVERS = Array.from({ length: 12 }).map((_, i) => {
-  const n = i + 1;
-  const dayNum = (n % 28) + 1;
-  const monthNum = ((n + 3) % 12) + 1;
-  const year = 2021;
-  const createdAt = new Date(Date.UTC(year, monthNum - 1, dayNum)).toISOString();
-  const status = n % 4 === 0 ? "Inactive" : "Active";
-
-  const ages = [22, 27, 31, 38, 44, 51];
-  const age = ages[n % ages.length];
-
-  const hasTruck = n % 3 !== 0;
-  const truck = hasTruck ? PLACEHOLDER_TRUCKS[n % PLACEHOLDER_TRUCKS.length] : null;
-
-  return {
-    id: `DR-${String(n).padStart(2, "0")}`,
-    fullName: "Full Name",
-    status,
-    phone: "+3233221122",
-    email: "driver@mail.com",
-    age,
-    truckId: truck?.id || "",
-    truckName: truck?.name || "",
-    createdAt,
-    avatarUrl: "",
-  };
-});
+// Drivers are real backend users; creation via overlay is not yet backend-backed.
 
 function isInAgeGroup(age, group) {
   const a = Number(age);
@@ -56,16 +27,29 @@ function isInAgeGroup(age, group) {
 
 export default function Page() {
   const { openOverlay } = useOverlay();
+  const { users, mutate: mutateUsers } = useUsers();
+  const { trucks, mutate: mutateTrucks } = useTrucks();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [age, setAge] = useState("all");
   const [truck, setTruck] = useState("all");
 
-  const [drivers, setDrivers] = useState(PLACEHOLDER_DRIVERS);
-
-  const handleCreateDriver = (driver) => {
-    setDrivers((prev) => [driver, ...prev]);
-  };
+  const drivers = useMemo(() => {
+    return (Array.isArray(users) ? users : [])
+      .filter((u) => String(u?.role || "") === "driver")
+      .map((u) => ({
+      id: u.id,
+      fullName: u.fullName || u.email || "",
+      status: "Active",
+      phone: u.phone || "",
+      email: u.email || "",
+      age: 31,
+      truckId: u.truck?._id || "",
+      truckName: u.truck?.licensePlate || "",
+      createdAt: u.createdAt,
+      avatarUrl: u.avatarUrl || "",
+    }));
+  }, [users]);
 
   const statusOptions = useMemo(
     () => [
@@ -88,8 +72,8 @@ export default function Page() {
   );
 
   const truckOptions = useMemo(
-    () => [{ value: "all", label: "All" }, ...PLACEHOLDER_TRUCKS.map((t) => ({ value: t.id, label: t.name }))],
-    []
+    () => [{ value: "all", label: "All" }, ...trucks.map((t) => ({ value: t.id, label: t.licensePlate || t.id }))],
+    [trucks]
   );
 
   const visibleDrivers = useMemo(() => {
@@ -112,10 +96,20 @@ export default function Page() {
     });
   }, [drivers, query, status, age, truck]);
 
-  const assignTruck = (driverId, truckId) => {
-    const t = PLACEHOLDER_TRUCKS.find((x) => x.id === truckId);
-    if (!t) return;
-    setDrivers((prev) => prev.map((d) => (d.id === driverId ? { ...d, truckId: t.id, truckName: t.name } : d)));
+  const assignTruck = (driverId, truckId, currentTruckId) => {
+    // When clearing selection, unassign from the currently linked truck.
+    if (!truckId) {
+      if (!currentTruckId) return Promise.resolve();
+      return apiFetch(`/trucks/${currentTruckId}`, { method: "PUT", body: { driver: null } })
+        .then(() => Promise.all([mutateUsers(), mutateTrucks()]))
+        .catch(() => null);
+    }
+
+    // Assign the user as the driver for the selected truck.
+    // Backend handles syncing relationships.
+    return apiFetch(`/trucks/${truckId}`, { method: "PUT", body: { driver: driverId } })
+      .then(() => Promise.all([mutateUsers(), mutateTrucks()]))
+      .catch(() => null);
   };
 
   return (
@@ -149,7 +143,12 @@ export default function Page() {
             padding: 0,
             flexShrink: 0,
           }}
-          onClick={() => openOverlay("driver", { trucks: PLACEHOLDER_TRUCKS, onCreate: handleCreateDriver })}
+          onClick={() =>
+            openOverlay("driver", {
+              trucks: trucks.map((t) => ({ id: t.id, name: t.licensePlate || t.id })),
+              afterSave: () => Promise.all([mutateUsers(), mutateTrucks()]),
+            })
+          }
         >
           <AddIcon style={{ fontSize: 20 }} />
           <span style={{ fontWeight: 600, fontSize: 14 }}>NEW</span>
@@ -176,7 +175,11 @@ export default function Page() {
 
       {/* Table */}
       <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
-        <DriversTable drivers={visibleDrivers} trucks={PLACEHOLDER_TRUCKS} onAssignTruck={assignTruck} />
+        <DriversTable
+          drivers={visibleDrivers}
+          trucks={trucks.map((t) => ({ id: t.id, name: t.licensePlate || t.id }))}
+          onAssignTruck={assignTruck}
+        />
       </Card>
     </div>
   );

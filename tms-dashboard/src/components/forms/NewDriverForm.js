@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useOverlay } from "@/hooks/useOverlay";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
+import { apiFetch } from "@/lib/fetcher";
+import PortalSelect from "@/components/PortalSelect";
 
 function makeDriverId() {
   const n = Date.now() % 10000;
@@ -14,13 +16,14 @@ export default function NewDriverForm() {
   const { closeOverlay, data } = useOverlay();
 
   const trucks = data?.trucks || [];
-  const onCreate = data?.onCreate;
+  const afterSave = data?.afterSave;
 
   const initial = {
     firstName: "",
     lastName: "",
     phone: "",
     email: "",
+    password: "",
     truckId: "",
   };
 
@@ -32,27 +35,25 @@ export default function NewDriverForm() {
 
   const clearAll = () => setForm(initial);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const fullName = [form.firstName, form.lastName].filter(Boolean).join(" ").trim() || "Full Name";
-    const t = trucks.find((x) => x.id === form.truckId);
-    const createdAt = new Date().toISOString();
-
-    const driver = {
-      id: makeDriverId(),
-      fullName,
-      status: "Active",
-      phone: form.phone,
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName,
       email: form.email,
-      age: 31,
-      truckId: t?.id || "",
-      truckName: t?.name || "",
-      createdAt,
-      avatarUrl: "",
+      phone: form.phone,
+      password: form.password,
     };
 
-    onCreate?.(driver);
+    const created = await apiFetch("/users", { method: "POST", body: payload });
+    const createdUserId = created?.user?._id || created?.user?.id;
+
+    if (form.truckId && createdUserId) {
+      await apiFetch(`/trucks/${form.truckId}`, { method: "PUT", body: { driver: createdUserId } });
+    }
+
+    await afterSave?.();
     closeOverlay();
   };
 
@@ -109,6 +110,18 @@ export default function NewDriverForm() {
               onChange={(e) => update("email", e.target.value)}
             />
           </div>
+
+          <div className="overlay-field">
+            <label>Password</label>
+            <input
+              className="overlay-input"
+              placeholder="Enter password"
+              type="password"
+              value={form.password}
+              onChange={(e) => update("password", e.target.value)}
+              required
+            />
+          </div>
         </div>
 
         <div className="overlay-section">
@@ -116,14 +129,16 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>Truck</label>
-            <select className="overlay-input" value={form.truckId} onChange={(e) => update("truckId", e.target.value)}>
-              <option value="">None</option>
-              {trucks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <PortalSelect
+              value={form.truckId}
+              onChange={(v) => update("truckId", v)}
+              options={[
+                { value: "", label: "None" },
+                ...trucks.map((t) => ({ value: t.id, label: t.name })),
+              ]}
+              placeholder="None"
+              triggerClassName="overlay-input overlay-select-trigger"
+            />
           </div>
         </div>
       </div>

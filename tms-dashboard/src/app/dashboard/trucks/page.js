@@ -7,52 +7,10 @@ import Card from "@/components/Card";
 import Filter from "@/components/Filter";
 import SortByFilter from "@/components/SortByFilter";
 import TrucksTable from "@/components/TrucksTable";
-
-const PLACEHOLDER_DRIVERS = [
-  { id: "D-01", name: "Driver" },
-  { id: "D-02", name: "Driver" },
-  { id: "D-03", name: "Driver" },
-];
-
-const PLACEHOLDER_TRAILERS = [
-  { id: "T-01", name: "Trailer" },
-  { id: "T-02", name: "Trailer" },
-  { id: "T-03", name: "Trailer" },
-];
-
-const PLACEHOLDER_TRUCKS = Array.from({ length: 12 }).map((_, i) => {
-  const n = i + 1;
-  const dayNum = (n % 28) + 1;
-  const monthNum = ((n + 3) % 12) + 1;
-  const year = 2021;
-  const createdAt = new Date(Date.UTC(year, monthNum - 1, dayNum)).toISOString();
-  const status = n % 4 === 0 ? "Inactive" : "Active";
-  const modelYear = 2018 + (n % 6);
-  const ESSENTIAL_TYPES = [
-    "Tractor unit",
-    "Rigid / box truck",
-    "Refrigerated (reefer) truck",
-    "Flatbed truck",
-    "Tanker truck",
-    "Tip truck / dumper",
-    "Van (light commercial)",
-  ];
-  const type = ESSENTIAL_TYPES[n % ESSENTIAL_TYPES.length];
-
-  return {
-    id: `TR-${String(n).padStart(2, "0")}`,
-    licensePlate: "1FHF222",
-    truck: "Model Year - Model",
-    status,
-    type,
-    modelYear,
-    driverId: "",
-    driverName: "",
-    trailerId: "",
-    trailerName: "",
-    createdAt,
-  };
-});
+import { useTrucks } from "@/hooks/useTrucks";
+import { useTrailers } from "@/hooks/useTrailers";
+import { useUsers } from "@/hooks/useUsers";
+import { apiFetch } from "@/lib/fetcher";
 
 function parseYearRange(value) {
   const v = String(value || "").trim();
@@ -67,13 +25,41 @@ function parseYearRange(value) {
 }
 
 export default function Page() {
+  const { trucks: trucksRaw, mutate: mutateTrucks } = useTrucks();
+  const { trailers: trailersRaw, mutate: mutateTrailers } = useTrailers();
+  const { users, mutate: mutateUsers } = useUsers();
+
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
   const [driver, setDriver] = useState("all");
   const [modelYear, setModelYear] = useState("");
 
-  const [trucks, setTrucks] = useState(PLACEHOLDER_TRUCKS);
+  const drivers = useMemo(
+    () => (Array.isArray(users) ? users : []).filter((u) => String(u?.role || "") === "driver"),
+    [users]
+  );
+
+  const trucks = useMemo(
+    () =>
+      (Array.isArray(trucksRaw) ? trucksRaw : []).map((t) => {
+        const modelBits = [t?.year, t?.brand, t?.model].filter(Boolean).join(" ");
+        return {
+          id: t?.id,
+          licensePlate: t?.licensePlate || "",
+          truck: modelBits,
+          status: t?.status || "",
+          type: t?.type || "",
+          modelYear: t?.year ?? null,
+          driverId: t?.driver?._id || t?.driver?.id || "",
+          driverName: t?.driver?.fullName || t?.driver?.email || "",
+          trailerId: t?.trailer?._id || t?.trailer?.id || "",
+          trailerName: t?.trailer?.licensePlate || "",
+          createdAt: t?.createdAt,
+        };
+      }),
+    [trucksRaw]
+  );
 
   const statusOptions = useMemo(
     () => [
@@ -99,8 +85,8 @@ export default function Page() {
   );
 
   const driverOptions = useMemo(
-    () => [{ value: "all", label: "All" }, ...PLACEHOLDER_DRIVERS.map((d) => ({ value: d.id, label: d.name }))],
-    []
+    () => [{ value: "all", label: "All" }, ...drivers.map((d) => ({ value: d.id, label: d.fullName || d.email || d.id }))],
+    [drivers]
   );
 
   const visibleTrucks = useMemo(() => {
@@ -131,15 +117,15 @@ export default function Page() {
   }, [trucks, query, status, type, driver, modelYear]);
 
   const assignDriver = (truckId, driverId) => {
-    const d = PLACEHOLDER_DRIVERS.find((x) => x.id === driverId);
-    if (!d) return;
-    setTrucks((prev) => prev.map((t) => (t.id === truckId ? { ...t, driverId: d.id, driverName: d.name } : t)));
+    return apiFetch(`/trucks/${truckId}`, { method: "PUT", body: { driver: driverId || null } })
+      .then(() => Promise.all([mutateTrucks(), mutateUsers()]))
+      .catch(() => null);
   };
 
   const assignTrailer = (truckId, trailerId) => {
-    const tr = PLACEHOLDER_TRAILERS.find((x) => x.id === trailerId);
-    if (!tr) return;
-    setTrucks((prev) => prev.map((t) => (t.id === truckId ? { ...t, trailerId: tr.id, trailerName: tr.name } : t)));
+    return apiFetch(`/trucks/${truckId}`, { method: "PUT", body: { trailer: trailerId || null } })
+      .then(() => Promise.all([mutateTrucks(), mutateTrailers()]))
+      .catch(() => null);
   };
 
   return (
@@ -210,8 +196,8 @@ export default function Page() {
       <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
         <TrucksTable
           trucks={visibleTrucks}
-          drivers={PLACEHOLDER_DRIVERS}
-          trailers={PLACEHOLDER_TRAILERS}
+          drivers={drivers.map((d) => ({ id: d.id, name: d.fullName || d.email || d.id }))}
+          trailers={(Array.isArray(trailersRaw) ? trailersRaw : []).map((tr) => ({ id: tr.id, name: tr.licensePlate || tr.id }))}
           onAssignDriver={assignDriver}
           onAssignTrailer={assignTrailer}
         />

@@ -5,6 +5,7 @@ import TableFooter from "@/components/TableFooter";
 import TruckStatusPill from "@/components/TruckStatusPill";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
+import PortalSelect from "@/components/PortalSelect";
 
 function formatDate(value) {
   if (!value) return "";
@@ -98,8 +99,12 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
   const isEditing = (id, field) => editing?.id === id && editing?.field === field;
 
   return (
-    <div className="w-full">
-      <div className="table-wrapper" ref={wrapperRef}>
+    <div className="w-full" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div
+        className="table-wrapper"
+        ref={wrapperRef}
+        style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto", overflowX: "auto" }}
+      >
         <div className="min-w-[1200px] inline-block align-top">
           <table
             className="orders-table w-full"
@@ -169,28 +174,22 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
 
                   <td style={{ padding: "12px 8px" }}>
                     {isEditing(d.id, "truck") ? (
-                      <select
-                        className="assign-select"
+                      <PortalSelect
                         value={d.truckId || ""}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          if (next) onAssignTruck?.(d.id, next);
-                          setEditing(null);
+                        onChange={(v) => {
+                          onAssignTruck?.(d.id, v || null, d.truckId || null);
                         }}
-                        onBlur={() => setEditing(null)}
-                        autoFocus
-                      >
-                        <option value="">Select truck…</option>
-                        {trucks.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder=""
+                        options={trucks.map((t) => ({ value: t.id, label: t.name }))}
+                        alwaysShowSearch
+                        triggerClassName="assign-select assign-select-trigger"
+                        openOnMount
+                        onClose={() => setEditing(null)}
+                      />
                     ) : (
                       <button type="button" className="assign-link" onClick={() => setEditing({ id: d.id, field: "truck" })}>
-                        <AddBoxOutlinedIcon style={{ fontSize: 18 }} />
-                        <span>{d.truckName || "Assign"}</span>
+                        {d.truckName ? null : <AddBoxOutlinedIcon style={{ fontSize: 18 }} />}
+                        {d.truckName ? <span>{d.truckName}</span> : null}
                       </button>
                     )}
                   </td>

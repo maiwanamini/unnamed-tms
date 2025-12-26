@@ -3,6 +3,7 @@
 import { useOverlay } from "@/hooks/useOverlay";
 import NewCustomerForm from "./forms/NewCustomerForm";
 import NewDriverForm from "./forms/NewDriverForm";
+import NewOrderForm from "./forms/NewOrderForm";
 
 export default function Overlay() {
   const { open, type, closeOverlay } = useOverlay();
@@ -12,6 +13,7 @@ export default function Overlay() {
   const renderContent = () => {
     if (type === "customer") return <NewCustomerForm />;
     if (type === "driver") return <NewDriverForm />;
+    if (type === "order") return <NewOrderForm />;
     // later: driver, truck, trailer, order...
     return null;
   };

@@ -5,10 +5,57 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { CaretDown, Garage, Headset, Package, Seatbelt, Truck, TruckTrailer, UserCircle, Users } from "@phosphor-icons/react";
+import { apiFetch } from "@/lib/fetcher";
 
 export default function Sidebar() {
   const pathname = usePathname() || "";
   const router = useRouter();
+
+  const [companyName, setCompanyName] = useState("");
+  const [companyId, setCompanyId] = useState("");
+
+  useEffect(() => {
+    // 1) Seed from cached user for instant paint.
+    try {
+      const raw = window.localStorage.getItem("tms_user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        const c = u?.company;
+        if (c && typeof c === "object") {
+          const nextName = String(c?.name || "");
+          const nextId = String(c?.companyId || c?._id || "");
+          Promise.resolve().then(() => {
+            setCompanyName(nextName);
+            setCompanyId(nextId);
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) Refresh from API (authoritative)
+    let cancelled = false;
+    apiFetch("/users/me")
+      .then((me) => {
+        if (cancelled) return;
+        try {
+          window.localStorage.setItem("tms_user", JSON.stringify(me));
+        } catch {
+          // ignore
+        }
+        const c = me?.company;
+        if (c) {
+          setCompanyName(String(c?.name || ""));
+          setCompanyId(String(c?.companyId || c?._id || ""));
+        }
+      })
+      .catch(() => null);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const dispatchRoutes = useMemo(() => new Set(["/dashboard/orders", "/dashboard/customers"]), []);
   const fleetRoutes = useMemo(() => new Set(["/dashboard/trucks", "/dashboard/trailers", "/dashboard/drivers"]), []);
@@ -82,8 +129,8 @@ export default function Sidebar() {
           </div>
           {!collapsed && (
             <div className="sidebar-company-text">
-              <div className="sidebar-company-name">Company Name</div>
-              <div className="sidebar-company-id">#ID</div>
+              <div className="sidebar-company-name">{companyName || ""}</div>
+              <div className="sidebar-company-id">{companyId ? `#${companyId}` : ""}</div>
             </div>
           )}
         </div>

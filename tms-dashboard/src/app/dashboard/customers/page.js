@@ -10,25 +10,6 @@ import CustomersTable from "@/components/CustomersTable";
 import { useOverlay } from "@/hooks/useOverlay";
 import { useCustomers } from "@/hooks/useCustomers";
 
-const PLACEHOLDER_CUSTOMERS = Array.from({ length: 20 }).map((_, i) => {
-  const n = i + 1;
-  const dayNum = (n % 28) + 1;
-  const monthNum = ((n + 3) % 12) + 1;
-  const day = String(dayNum).padStart(2, "0");
-  const month = String(monthNum).padStart(2, "0");
-  const year = 2021 + (n % 4);
-
-  return {
-    id: `C-${String(n).padStart(2, "0")}`,
-    name: n === 1 ? "MILMAS BV" : "Client name",
-    contactName: n === 1 ? "Milad Amini" : "Contact Name",
-    phone: "+3233221122",
-    email: n === 1 ? "planning@milmas.be" : "name@mail.com",
-    address: "Address",
-    createdAt: new Date(Date.UTC(year, monthNum - 1, dayNum)).toISOString(),
-  };
-});
-
 export default function CustomersPage() {
   const { openOverlay } = useOverlay();
   const { customers, isLoading } = useCustomers();
@@ -46,13 +27,11 @@ export default function CustomersPage() {
     []
   );
 
-  const sourceCustomers = (customers?.length || 0) > 0 ? customers : PLACEHOLDER_CUSTOMERS;
-
   const visibleCustomers = useMemo(() => {
     const q = (query || "").toLowerCase().trim();
     const filtered = !q
-      ? sourceCustomers
-      : sourceCustomers.filter((c) => {
+      ? customers
+      : customers.filter((c) => {
           const hay = [
             c?.name,
             c?.contactName,
@@ -81,10 +60,9 @@ export default function CustomersPage() {
     });
 
     return sorted;
-  }, [sourceCustomers, query, sortBy]);
+  }, [customers, query, sortBy]);
 
-  // If we're showing placeholders, avoid the loading flash.
-  const showLoading = isLoading && (customers?.length || 0) === 0 && sourceCustomers === customers;
+  const showLoading = Boolean(isLoading);
 
   return (
     <>

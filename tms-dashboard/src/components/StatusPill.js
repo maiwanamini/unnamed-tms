@@ -6,8 +6,20 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 
 export default function StatusPill({ status }) {
-  // normalize 'En route' to 'Moving' so both use same label and styles
-  const disp = status === 'En route' ? 'Moving' : status;
+  const normalize = (value) => {
+    const v = String(value || "").trim().toLowerCase();
+    if (!v) return "Pending";
+    if (v === "en route" || v === "en-route" || v === "moving" || v === "in-progress" || v === "inprogress") return "Moving";
+    if (v === "pending" || v === "assigned") return "Pending";
+    if (v === "completed" || v === "complete") return "Completed";
+    if (v === "canceled" || v === "cancelled" || v === "canceled") return "Canceled";
+    // Already a display label?
+    if (v === "moving" || v === "pending" || v === "completed" || v === "canceled" || v === "cancelled") return normalize(v);
+    // Fallback: title-case first letter (keeps UX reasonable for unexpected statuses)
+    return v.charAt(0).toUpperCase() + v.slice(1);
+  };
+
+  const disp = normalize(status);
 
   const cls =
     disp === "Moving"
@@ -27,7 +39,7 @@ export default function StatusPill({ status }) {
 
   return (
     <span className={cls}>
-      <span className="status-icon">{icons[disp]}</span>
+      <span className="status-icon">{icons[disp] || icons.Pending}</span>
       <span className="status-text">{disp}</span>
     </span>
   );

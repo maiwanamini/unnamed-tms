@@ -97,8 +97,12 @@ export default function CustomersTable({ customers = [] }) {
   };
 
   return (
-    <div className="w-full">
-      <div className="table-wrapper" ref={wrapperRef}>
+    <div className="w-full" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div
+        className="table-wrapper"
+        ref={wrapperRef}
+        style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto", overflowX: "auto" }}
+      >
         <div className="min-w-[1200px] inline-block align-top">
           <table
             className="orders-table w-full"
