@@ -1,14 +1,13 @@
-import React from "react";
+import { MaterialIcons } from "@expo/vector-icons";
 import { View } from "react-native";
 import useSWR from "swr";
+import { useAuth } from "../context/AuthContext";
 import fetcher from "../lib/_fetcher";
 import { api } from "../lib/api";
 import global from "../styles/global";
 import colors from "../theme/colors";
-import { ThemedText } from "./ThemedText";
 import IconButton from "./IconButton";
-import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { ThemedText } from "./ThemedText";
 
 const ContactCard = ({ companyId, contact }) => {
   const { token } = useAuth();
@@ -58,9 +57,9 @@ const ContactCard = ({ companyId, contact }) => {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
+            width: 3,
+            height: 48,
+            borderRadius: 99,
             backgroundColor: colors.text,
           }}
         />
@@ -68,7 +67,9 @@ const ContactCard = ({ companyId, contact }) => {
           <ThemedText type="h2" style={{ marginBottom: 2 }}>
             {name}
           </ThemedText>
-          <ThemedText style={{ color: colors.muted }}>{info}</ThemedText>
+          <ThemedText style={{ color: colors.muted }}>
+            {`DOT: ${info}`}
+          </ThemedText>
         </View>
       </View>
       <View style={[global.buttonWrapSmall, { columnGap: 4 }]}>
