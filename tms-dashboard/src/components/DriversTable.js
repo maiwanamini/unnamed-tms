@@ -3,21 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TableFooter from "@/components/TableFooter";
 import TruckStatusPill from "@/components/TruckStatusPill";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import Tooltip from "@/components/Tooltip";
 import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import PortalSelect from "@/components/PortalSelect";
+import { formatDateDDMMYYYY } from "@/lib/date";
+import AvatarCircle from "@/components/AvatarCircle";
 
-function formatDate(value) {
-  if (!value) return "";
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const yyyy = String(d.getUTCFullYear());
-  return `${dd}/${mm}/${yyyy}`;
-}
-
-export default function DriversTable({ drivers = [], trucks = [], onAssignTruck }) {
+export default function DriversTable({ drivers = [], trucks = [], onAssignTruck, onToggleStatus }) {
   const wrapperRef = useRef(null);
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
@@ -122,7 +114,7 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
                     key={c.key}
                     style={{
                       textAlign: "left",
-                      padding: "12px 8px",
+                      padding: "8px 8px",
                       fontWeight: 600,
                       fontSize: 14,
                       color: "#0f172a",
@@ -140,26 +132,7 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
                 <tr key={d.id}>
                   <td style={{ padding: "12px 8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <span
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 9999,
-                          background: "#ffffff",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          overflow: "hidden",
-                        }}
-                      >
-                        {d.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={d.avatarUrl} alt="" style={{ width: 28, height: 28, objectFit: "cover" }} />
-                        ) : (
-                          <AccountCircleIcon style={{ fontSize: 28, color: "#e5e7eb" }} />
-                        )}
-                      </span>
+                      <AvatarCircle src={d.avatarUrl} name={d.fullName} seed={d.id} size={28} />
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {d.fullName || ""}
                       </span>
@@ -167,7 +140,26 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
                   </td>
 
                   <td style={{ padding: "12px 8px" }}>
-                    <TruckStatusPill status={d.status} />
+                    <Tooltip label={onToggleStatus ? "Change status" : ""} wrapperProps={{ style: { display: "inline-flex" } }}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          if (!onToggleStatus) return;
+                          const isInactive = String(d.status || "").toLowerCase() === "inactive";
+                          onToggleStatus(d.id, isInactive ? "active" : "inactive");
+                        }}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          padding: 0,
+                          textAlign: "left",
+                          cursor: onToggleStatus ? "pointer" : "default",
+                        }}
+                      >
+                        <TruckStatusPill status={d.status} />
+                      </button>
+                    </Tooltip>
                   </td>
                   <td style={{ padding: "12px 8px" }}>{d.phone || ""}</td>
                   <td style={{ padding: "12px 8px" }}>{d.email || ""}</td>
@@ -194,7 +186,7 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck 
                     )}
                   </td>
 
-                  <td style={{ padding: "12px 8px" }}>{formatDate(d.createdAt) || ""}</td>
+                  <td style={{ padding: "12px 8px" }}>{formatDateDDMMYYYY(d.createdAt) || ""}</td>
                 </tr>
               ))}
             </tbody>

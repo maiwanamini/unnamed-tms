@@ -20,6 +20,7 @@ export function useUsers() {
     email: u?.email || "",
     phone: u?.phone || "",
     role: u?.role || "",
+    status: u?.status || "",
     company: u?.company || null,
     avatarUrl: u?.avatarUrl || u?.profileImageUrl || u?.photoUrl || u?.imageUrl || "",
     truck: u?.truck || null,

@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import Tooltip from "@/components/Tooltip";
+import AvatarCircle from "@/components/AvatarCircle";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -208,28 +210,27 @@ export default function PortalSelect({
                       />
                     </div>
 
-                    <button
-                      type="button"
-                      className={`status-search-clear ${hasSelection ? "active" : ""}`}
-                      onClick={
-                        hasSelection
-                          ? () => {
-                              setQuery("");
-                              onChange?.("");
-                              requestAnimationFrame(() => {
-                                searchRef.current?.focus?.();
-                              });
-                            }
-                          : undefined
-                      }
-                      aria-label="Clear selection"
-                      disabled={!hasSelection}
-                    >
-                      <DeleteIcon style={{ fontSize: 20 }} />
-                      <span className="status-clear-tooltip" aria-hidden="true">
-                        Clear selection
-                      </span>
-                    </button>
+                    <Tooltip label={hasSelection ? "Clear selection" : ""} wrapperProps={{ style: { display: "inline-flex" } }}>
+                      <button
+                        type="button"
+                        className={`status-search-clear ${hasSelection ? "active" : ""}`}
+                        onClick={
+                          hasSelection
+                            ? () => {
+                                setQuery("");
+                                onChange?.("");
+                                requestAnimationFrame(() => {
+                                  searchRef.current?.focus?.();
+                                });
+                              }
+                            : undefined
+                        }
+                        aria-label="Clear selection"
+                        disabled={!hasSelection}
+                      >
+                        <DeleteIcon style={{ fontSize: 20 }} />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               ) : null}
@@ -245,6 +246,11 @@ export default function PortalSelect({
               >
                 {filteredOptions.map((opt) => {
                   const active = String(opt.value) === String(value);
+                  const showAvatar =
+                    opt &&
+                    typeof opt === "object" &&
+                    ("avatarUrl" in opt || "imageUrl" in opt || "photoUrl" in opt || "profileImageUrl" in opt);
+                  const avatarUrl = opt?.avatarUrl || opt?.imageUrl || opt?.photoUrl || opt?.profileImageUrl || "";
                   return (
                     <div
                       key={String(opt.value)}
@@ -266,7 +272,21 @@ export default function PortalSelect({
                         }
                       }}
                     >
-                      {opt.label}
+                      {showAvatar ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                          <AvatarCircle
+                            src={String(avatarUrl || "")}
+                            name={String(opt.label || "")}
+                            seed={String(opt.value || opt.label || "")}
+                            size={24}
+                          />
+                          <span className="truncate" style={{ minWidth: 0, flex: "1 1 auto" }}>
+                            {opt.label}
+                          </span>
+                        </div>
+                      ) : (
+                        opt.label
+                      )}
                     </div>
                   );
                 })}

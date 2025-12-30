@@ -5,11 +5,14 @@ import { useOverlay } from "@/hooks/useOverlay";
 import { useCustomers } from "@/hooks/useCustomers";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
+import TextInput from "@/components/TextInput";
 import { apiFetch } from "@/lib/fetcher";
 
 export default function NewCustomerForm() {
-  const { closeOverlay } = useOverlay();
+  const { closeOverlay, data } = useOverlay();
   const { mutate } = useCustomers();
+  const existing = data?.mode === "edit" ? data?.customer : null;
+  const isEdit = Boolean(existing?.id);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
@@ -23,11 +26,11 @@ export default function NewCustomerForm() {
   const isValidEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || "").trim());
 
   const initial = {
-    name: "",
-    address: "",
-    contactName: "",
-    phone: "",
-    email: "",
+    name: existing?.name || "",
+    address: existing?.address || "",
+    contactName: existing?.contactName || "",
+    phone: existing?.phone || "",
+    email: existing?.email || "",
   };
 
   const [form, setForm] = useState(initial);
@@ -61,21 +64,24 @@ export default function NewCustomerForm() {
     setFieldErrors({ name: "", address: "", contactName: "", phone: "", email: "" });
     setSubmitting(true);
     try {
-      await apiFetch("/clients", {
-        method: "POST",
-        body: {
-          clientName: form.name,
-          clientAddress: form.address,
-          contactName: form.contactName,
-          contactPhone: form.phone,
-          contactEmail: form.email,
-        },
-      });
+      const body = {
+        clientName: form.name,
+        clientAddress: form.address,
+        contactName: form.contactName,
+        contactPhone: form.phone,
+        contactEmail: form.email,
+      };
+
+      if (isEdit) {
+        await apiFetch(`/clients/${existing.id}`, { method: "PUT", body });
+      } else {
+        await apiFetch("/clients", { method: "POST", body });
+      }
 
       await mutate();
       closeOverlay();
     } catch (e) {
-      const message = String(e?.data?.message || e?.message || "Failed to create customer");
+      const message = String(e?.data?.message || e?.message || (isEdit ? "Failed to update customer" : "Failed to create customer"));
       const field = String(e?.data?.field || "");
       const code = String(e?.data?.code || "");
 
@@ -100,7 +106,7 @@ export default function NewCustomerForm() {
   return (
     <form onSubmit={handleSubmit} className="overlay-form">
       <div className="overlay-topbar">
-        <div className="overlay-title">ADD CUSTOMER</div>
+        <div className="overlay-title">{isEdit ? "EDIT CUSTOMER" : "ADD CUSTOMER"}</div>
         <div className="overlay-actions">
           <button type="button" className="overlay-clear" onClick={clearAll}>
             <DeleteOutlineIcon style={{ fontSize: 18 }} />
@@ -124,8 +130,8 @@ export default function NewCustomerForm() {
 
           <div className="overlay-field">
             <label>Name</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
               placeholder="Enter Name"
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
@@ -135,8 +141,8 @@ export default function NewCustomerForm() {
 
           <div className="overlay-field">
             <label>Address</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
               placeholder="Enter Address"
               value={form.address}
               onChange={(e) => update("address", e.target.value)}
@@ -150,8 +156,8 @@ export default function NewCustomerForm() {
 
           <div className="overlay-field">
             <label>Contact Name</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
               placeholder="Enter Contact Name"
               value={form.contactName}
               onChange={(e) => update("contactName", e.target.value)}
@@ -169,8 +175,9 @@ export default function NewCustomerForm() {
 
           <div className="overlay-field">
             <label>Contact E-mail</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
+              type="email"
               placeholder="planning@customer.com"
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
@@ -185,7 +192,7 @@ export default function NewCustomerForm() {
           Cancel
         </button>
         <button type="submit" className="btn-primary overlay-primary" disabled={submitting}>
-          {submitting ? "Creating…" : "Create"}
+          {submitting ? (isEdit ? "Saving…" : "Creating…") : isEdit ? "Save" : "Create"}
         </button>
       </div>
     </form>

@@ -17,6 +17,7 @@ export function useTrailers() {
     licensePlate: t?.licensePlate || "",
     brand: t?.brand || "",
     model: t?.model || "",
+    trailerNumber: t?.trailerNumber || "",
     year: t?.year ?? null,
     type: t?.type || "",
     truck: t?.truck || null,

@@ -4,38 +4,62 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { CaretDown, Garage, Headset, Package, Seatbelt, Truck, TruckTrailer, UserCircle, Users } from "@phosphor-icons/react";
+import { CaretDown, Garage, GearSix, Headset, Package, Seatbelt, Truck, TruckTrailer, Users } from "@phosphor-icons/react";
 import { apiFetch } from "@/lib/fetcher";
+import AvatarCircle from "@/components/AvatarCircle";
+import Tooltip from "@/components/Tooltip";
 
 export default function Sidebar() {
   const pathname = usePathname() || "";
   const router = useRouter();
 
+  const [userName, setUserName] = useState("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [companyLogoUrl, setCompanyLogoUrl] = useState("");
 
   useEffect(() => {
-    // 1) Seed from cached user for instant paint.
-    try {
-      const raw = window.localStorage.getItem("tms_user");
-      if (raw) {
-        const u = JSON.parse(raw);
-        const c = u?.company;
-        if (c && typeof c === "object") {
-          const nextName = String(c?.name || "");
-          const nextId = String(c?.companyId || c?._id || "");
-          const nextLogo = String(c?.logoUrl || "");
-          Promise.resolve().then(() => {
-            setCompanyName(nextName);
-            setCompanyId(nextId);
-            setCompanyLogoUrl(nextLogo);
-          });
+    const seedFromCache = () => {
+      try {
+        const raw = window.localStorage.getItem("tms_user");
+        if (raw) {
+          const u = JSON.parse(raw);
+
+          const nextUserName = String(
+            u?.fullName || `${String(u?.firstName || "").trim()} ${String(u?.lastName || "").trim()}`
+          ).trim();
+          const nextUserAvatar = String(u?.avatarUrl || "");
+
+          const c = u?.company;
+          if (c && typeof c === "object") {
+            const nextName = String(c?.name || "");
+            const nextId = String(c?.companyId || c?._id || "");
+            const nextLogo = String(c?.logoUrl || "");
+            Promise.resolve().then(() => {
+              setUserName(nextUserName);
+              setUserAvatarUrl(nextUserAvatar);
+              setCompanyName(nextName);
+              setCompanyId(nextId);
+              setCompanyLogoUrl(nextLogo);
+            });
+          } else {
+            Promise.resolve().then(() => {
+              setUserName(nextUserName);
+              setUserAvatarUrl(nextUserAvatar);
+            });
+          }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    };
+
+    // 1) Seed from cached user for instant paint.
+    seedFromCache();
+
+    const onUserUpdated = () => seedFromCache();
+    window.addEventListener("tms_user_updated", onUserUpdated);
 
     // 2) Refresh from API (authoritative)
     let cancelled = false;
@@ -47,6 +71,13 @@ export default function Sidebar() {
         } catch {
           // ignore
         }
+
+        const nextUserName = String(
+          me?.fullName || `${String(me?.firstName || "").trim()} ${String(me?.lastName || "").trim()}`
+        ).trim();
+        setUserName(nextUserName);
+        setUserAvatarUrl(String(me?.avatarUrl || ""));
+
         const c = me?.company;
         if (c) {
           setCompanyName(String(c?.name || ""));
@@ -58,6 +89,7 @@ export default function Sidebar() {
 
     return () => {
       cancelled = true;
+      window.removeEventListener("tms_user_updated", onUserUpdated);
     };
   }, []);
 
@@ -66,6 +98,7 @@ export default function Sidebar() {
 
   const isDispatchActive = dispatchRoutes.has(pathname);
   const isFleetActive = fleetRoutes.has(pathname);
+  const isSettingsActive = pathname.startsWith("/dashboard/settings");
 
   const [dispatchOpen, setDispatchOpen] = useState(true);
   const [fleetOpen, setFleetOpen] = useState(true);
@@ -127,22 +160,81 @@ export default function Sidebar() {
   return (
     <aside className={`sidebar-shell${collapsed ? " collapsed" : ""}`}>
       <div className="sidebar-top">
-        <div className="sidebar-company">
-          <div className="sidebar-company-icon" aria-hidden="true">
+        {collapsed ? (
+          <>
+            <Tooltip label={collapsed ? "Expand" : "Collapse"} placement="bottom">
+              <button
+                type="button"
+                className="sidebar-top-btn"
+                onClick={() => {
+                  setCollapsed((v) => {
+                    const next = !v;
+                    if (!next) {
+                      setDispatchOpen(true);
+                      setFleetOpen(true);
+                    }
+                    return next;
+                  });
+                }}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <span className="sidebar-collapse-icon" aria-hidden="true">
+                  <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
+                    <path
+                      fill="currentColor"
+                      d="M500-592v224q0 14 12 19t22-5l98-98q12-12 12-28t-12-28l-98-98q-10-10-22-5t-12 19ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm200-80h360v-560H400v560Z"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </Tooltip>
+
             {companyLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={companyLogoUrl} alt="" className="sidebar-company-avatar" />
-            ) : (
-              <UserCircle className="sidebar-company-avatar" weight="fill" />
-            )}
-          </div>
-          {!collapsed && (
-            <div className="sidebar-company-text">
-              <div className="sidebar-company-name">{companyName || ""}</div>
-              <div className="sidebar-company-id">{companyId ? `#${companyId}` : ""}</div>
+              <img src={companyLogoUrl} alt="Company logo" className="sidebar-company-logo sidebar-company-logo--collapsed" />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className="sidebar-company">
+              {companyLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={companyLogoUrl} alt="Company logo" className="sidebar-company-logo" />
+              ) : null}
+              <div className="sidebar-company-text">
+                <div className="sidebar-company-name">{companyName || ""}</div>
+                <div className="sidebar-company-id">{companyId ? `#${companyId}` : ""}</div>
+              </div>
             </div>
-          )}
-        </div>
+
+            <Tooltip label={collapsed ? "Expand" : "Collapse"} placement="bottom">
+              <button
+                type="button"
+                className="sidebar-top-btn"
+                onClick={() => {
+                  setCollapsed((v) => {
+                    const next = !v;
+                    if (!next) {
+                      setDispatchOpen(true);
+                      setFleetOpen(true);
+                    }
+                    return next;
+                  });
+                }}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <span className="sidebar-collapse-icon" aria-hidden="true">
+                  <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
+                    <path
+                      fill="currentColor"
+                      d="M660-368v-224q0-14-12-19t-22 5l-98 98q-12 12-12 28t12 28l98 98q10 10 22 5t12-19ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm200-80h360v-560H400v560Z"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </Tooltip>
+          </>
+        )}
       </div>
 
       {!collapsed ? (
@@ -206,13 +298,25 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+
+          <div className={sectionClass(isSettingsActive)}>
+            <Link className={sectionBtnClass(isSettingsActive)} href="/dashboard/settings" aria-label="Settings">
+              <span className="sidebar-section-left">
+                <GearSix size={18} weight="fill" />
+                <span>Settings</span>
+              </span>
+            </Link>
+          </div>
         </nav>
       ) : (
         <nav className="sidebar-iconnav" aria-label="Sidebar">
-          <div
-            className="sidebar-flyout-item"
-            onMouseEnter={() => openFlyoutFor("dispatch")}
-            onMouseLeave={scheduleCloseFlyout}
+          <Tooltip
+            label="Dispatch"
+            wrapperClassName="sidebar-flyout-item"
+            wrapperProps={{
+              onMouseEnter: () => openFlyoutFor("dispatch"),
+              onMouseLeave: scheduleCloseFlyout,
+            }}
           >
             <Link
               className={`sidebar-iconlink${isDispatchActive ? " active" : ""}`}
@@ -221,7 +325,6 @@ export default function Sidebar() {
             >
               <Headset size={18} weight="fill" />
             </Link>
-            <div className="sidebar-icon-tooltip" role="tooltip">Dispatch</div>
 
             <div
               className={`sidebar-flyout${openFlyout === "dispatch" ? " open" : ""}`}
@@ -241,12 +344,15 @@ export default function Sidebar() {
                 </Link>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="sidebar-flyout-item"
-            onMouseEnter={() => openFlyoutFor("fleet")}
-            onMouseLeave={scheduleCloseFlyout}
+          <Tooltip
+            label="Fleet"
+            wrapperClassName="sidebar-flyout-item"
+            wrapperProps={{
+              onMouseEnter: () => openFlyoutFor("fleet"),
+              onMouseLeave: scheduleCloseFlyout,
+            }}
           >
             <Link
               className={`sidebar-iconlink${isFleetActive ? " active" : ""}`}
@@ -255,7 +361,6 @@ export default function Sidebar() {
             >
               <Garage size={18} weight="fill" />
             </Link>
-            <div className="sidebar-icon-tooltip" role="tooltip">Fleet</div>
 
             <div
               className={`sidebar-flyout${openFlyout === "fleet" ? " open" : ""}`}
@@ -279,63 +384,49 @@ export default function Sidebar() {
                 </Link>
               </div>
             </div>
-          </div>
+          </Tooltip>
+
+          <Tooltip label="Settings">
+            <Link
+              className={`sidebar-iconlink${isSettingsActive ? " active" : ""}`}
+              href="/dashboard/settings"
+              aria-label="Settings"
+            >
+              <GearSix size={18} weight="fill" />
+            </Link>
+          </Tooltip>
         </nav>
       )}
 
       <div className="sidebar-bottom">
         <div className="sidebar-bottom-actions">
-          <button
-            type="button"
-            className="sidebar-collapse-btn"
-            onClick={() => {
-              setCollapsed((v) => {
-                const next = !v;
-                if (!next) {
-                  setDispatchOpen(true);
-                  setFleetOpen(true);
-                }
-                return next;
-              });
-            }}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <span className="sidebar-collapse-icon" aria-hidden="true">
-              {collapsed ? (
-                <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
-                  <path
-                    fill="currentColor"
-                    d="M500-592v224q0 14 12 19t22-5l98-98q12-12 12-28t-12-28l-98-98q-10-10-22-5t-12 19ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm200-80h360v-560H400v560Z"
-                  />
-                </svg>
-              ) : (
-                <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
-                  <path
-                    fill="currentColor"
-                    d="M660-368v-224q0-14-12-19t-22 5l-98 98q-12 12-12 28t12 28l98 98q10 10 22 5t12-19ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm200-80h360v-560H400v560Z"
-                  />
-                </svg>
-              )}
-            </span>
-            {!collapsed && <span className="sidebar-collapse-label">Collapse Sidebar</span>}
-          </button>
+          {!collapsed ? (
+            <div className="sidebar-userbar">
+              <div className="sidebar-userinfo">
+                <AvatarCircle className="sidebar-user-avatar" src={userAvatarUrl} name={userName} size={28} alt="User" />
+                <div style={{ display: "inline-flex", minWidth: 0 }}>
+                  <div className="sidebar-username">{userName || ""}</div>
+                </div>
+              </div>
 
-          <button
-            type="button"
-            className="sidebar-collapse-btn"
-            onClick={handleLogout}
-            aria-label="Logout"
-          >
-            <span className="sidebar-collapse-icon" aria-hidden="true">
-              <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
-                <path
-                  fill="currentColor"
-                  d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h240q17 0 28.5 11.5T480-160q0 17-11.5 28.5T440-120H200Zm487-320H400q-17 0-28.5-11.5T360-480q0-17 11.5-28.5T400-520h287l-75-75q-11-11-11-27t11-28q11-12 28-12.5t29 11.5l143 143q12 12 12 28t-12 28L669-309q-12 12-28.5 11.5T612-310q-11-12-10.5-28.5T613-366l74-74Z"
-                />
-              </svg>
-            </span>
-            {!collapsed && <span className="sidebar-collapse-label">Logout</span>}
-          </button>
+              <Tooltip label="Logout">
+                <button type="button" className="sidebar-logout-btn" onClick={handleLogout} aria-label="Logout">
+                  <span className="sidebar-collapse-icon" aria-hidden="true">
+                    <svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true" focusable="false">
+                      <path
+                        fill="currentColor"
+                        d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h240q17 0 28.5 11.5T480-160q0 17-11.5 28.5T440-120H200Zm487-320H400q-17 0-28.5-11.5T360-480q0-17 11.5-28.5T400-520h287l-75-75q-11-11-11-27t11-28q11-12 28-12.5t29 11.5l143 143q12 12 12 28t-12 28L669-309q-12 12-28.5 11.5T612-310q-11-12-10.5-28.5T613-366l74-74Z"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </Tooltip>
+            </div>
+          ) : (
+            <div className="sidebar-user-mini" aria-label="Current user">
+              <AvatarCircle src={userAvatarUrl} name={userName} size={44} alt="User" />
+            </div>
+          )}
         </div>
       </div>
     </aside>

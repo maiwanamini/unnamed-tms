@@ -1,42 +1,42 @@
 # TMS Dashboard
 
-Next.js (App Router) dashboard UI for the TMS project.
+Next.js (App Router) dashboard UI for the Unnamed TMS.
 
-This README is intentionally “reproducible install”-focused so anyone who pulls the repo gets the same result.
+This README is focused on getting a fresh clone running reliably.
 
-## Requirements
+## Prerequisites
 
-- Node.js: recommend Node 20 LTS (Node 18.18+ should also work)
-- npm: use the npm version that ships with your Node install
+- Node.js: Node 20 LTS recommended (this project uses Next 16 + React 19)
+- npm: use the npm that ships with Node
 
-## Install (fresh machine)
+## Clone & Run (recommended)
 
-1) Clone the repo
+This dashboard lives inside a multi-project repo.
 
-2) Go to the dashboard folder
+### 1) Clone
 
-This repo contains multiple projects. All commands below assume you are running inside this folder:
-
-```powershell
-cd tms-dashboard
+```bash
+git clone https://github.com/maiwanamini/unnamed-tms.git
+cd unnamed-tms/tms-dashboard
 ```
 
-3) Install dependencies using the lockfile (important)
+### 2) Install deps (lockfile)
+
+Use `npm ci` so everyone gets the same dependency tree.
 
 ```bash
 npm ci
 ```
 
-Why `npm ci`?
+### 3) Configure API (choose one)
 
-- It installs exactly what is in `package-lock.json`.
-- `npm install` can update the lockfile or resolve versions differently across machines.
+By default, the dashboard will use the deployed backend:
 
-4) Create environment file
+```text
+https://unnamed-tms-backend.onrender.com/api
+```
 
-This repo uses a local env file that is not committed.
-
-- Copy `.env-example` to `.env.local`
+If you want to override this (example: local backend for testing), create an env file:
 
 Windows (PowerShell):
 
@@ -50,7 +50,24 @@ macOS/Linux:
 cp .env-example .env.local
 ```
 
-5) Start the dev server
+Then set:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=https://unnamed-tms-backend.onrender.com/api
+```
+
+Local testing example:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
+```
+
+Notes:
+- `.env.local` is ignored by git (do not commit secrets)
+- After changing `.env.local`, restart the dev server
+- Only `NEXT_PUBLIC_API_BASE_URL` is used by the dashboard (see `src/lib/fetcher.js`).
+
+### 4) Start the dashboard
 
 ```bash
 npm run dev
@@ -58,33 +75,126 @@ npm run dev
 
 Open http://localhost:3000
 
-If port 3000 is already in use, Next.js will automatically pick another port (for example, http://localhost:3001).
+## Running the backend locally (optional testing)
 
-## Environment variables
+If you cloned this monorepo-like workspace, you likely already have the backend folder next to `unnamed-tms/`:
 
-Environment variables live in `.env.local` (ignored by git).
+```
+TMS working/
+	unnamed-tms/
+		tms-dashboard/
+	unnamed-tms-backend/
+```
 
-Required for API calls (optional override):
+### 1) Configure backend env
 
-- `NEXT_PUBLIC_API_BASE_URL`
-	- What: base URL for the backend API used by the frontend (see `src/lib/fetcher.js`).
-	- Default: if not set, the app uses the deployed backend URL.
-	- Example: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api`
+Create `unnamed-tms-backend/.env` with at least:
 
-Present in `.env-example` (used only if/when server-side auth/db is enabled in this repo):
+```text
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+PORT=4000
+```
 
-- `MONGO_URI` (or `MONGODB_URI`)
-- `JWT_SECRET` (or `AUTH_SECRET`)
+Uploads (avatars/logos) are optional; if you want them working locally, also set:
 
-Note: do not commit real secrets. Share them via a secure channel.
+```text
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
 
-## Key dependencies
+### 2) Install + run backend
 
-Installed by `npm ci` from `package.json`/`package-lock.json`:
+From the dashboard folder:
 
-- Next.js 16
-- React 19
-- Tailwind CSS 4
-- MUI (`@mui/material`)
-- SWR, Zustand
-- `@phosphor-icons/react` (icons)
+Windows (PowerShell):
+
+```powershell
+cd ..\..\unnamed-tms-backend
+npm ci
+npm run dev
+```
+
+macOS/Linux:
+
+```bash
+cd ../../unnamed-tms-backend
+npm ci
+npm run dev
+```
+
+The backend defaults to http://localhost:4000
+
+### 3) Point the dashboard at the backend
+
+Ensure `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api` in `.env.local` and restart `npm run dev`.
+
+### Alternative: separate backend repo
+
+Backend repo: https://github.com/maiwanamini/unnamed-tms-backend
+
+Typical flow:
+
+```bash
+git clone https://github.com/maiwanamini/unnamed-tms-backend.git
+cd unnamed-tms-backend
+npm ci
+npm run dev
+```
+
+Then point the dashboard at it via `NEXT_PUBLIC_API_BASE_URL`.
+
+## Uploads (avatars/logos)
+
+The Register page supports an optional profile picture upload, and Create Company supports an optional logo upload.
+Uploads go through the backend and require Cloudinary configuration on the backend.
+
+## Common issues
+
+### Commands run from the wrong folder
+
+Run all dashboard commands from the folder that contains this README and `package.json`:
+
+```bash
+cd unnamed-tms/tms-dashboard
+```
+
+### Clean install
+
+Windows (PowerShell):
+
+```powershell
+Remove-Item -Recurse -Force node_modules, .next
+npm ci
+```
+
+macOS/Linux:
+
+```bash
+rm -rf node_modules .next
+npm ci
+```
+
+### Backend mismatch / wrong API URL
+
+If one machine is hitting a different backend than others, confirm `NEXT_PUBLIC_API_BASE_URL`.
+
+If you see errors like “Failed to reach API … Check NEXT_PUBLIC_API_BASE_URL”, it means the dashboard can’t reach the backend URL.
+
+### 401 Unauthorized / stuck login
+
+The dashboard stores tokens in `localStorage` (and sometimes `sessionStorage` during onboarding).
+If you switch between backends, clear site storage and log in again.
+
+### Next.js dev server lock
+
+If you see a `.next/dev/lock` issue, it usually means another `next dev` is still running.
+Stop the old process, or delete `.next` and restart.
+
+## Scripts
+
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm run start` — run production server
+- `npm run lint` — lint

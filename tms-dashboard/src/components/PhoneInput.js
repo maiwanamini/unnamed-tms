@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useCountryCallingCodes } from "@/hooks/useCountryCallingCodes";
+import SelectInput from "@/components/SelectInput";
+import Image from "next/image";
 
 const DEFAULT_CODE = "+32";
 
@@ -31,178 +33,118 @@ function parsePhone(value, countries) {
 export default function PhoneInput({ value, onChange, placeholder = "411 22 33 44" }) {
   const { countries, isLoading } = useCountryCallingCodes();
 
-  const [open, setOpen] = useState(false);
-  const [useEmojiOnly, setUseEmojiOnly] = useState(false);
-  const [search, setSearch] = useState("");
-  const rootRef = useRef(null);
-
   const parsed = useMemo(() => parsePhone(value, countries), [value, countries]);
-
-  useEffect(() => {
-    function onDoc(e) {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(e.target)) setOpen(false);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("touchstart", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("touchstart", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-  const selected = useMemo(() => {
-    return countries.find((c) => c.code === parsed.code) || { flagEmoji: "", flagPng: "", name: "", code: parsed.code };
-  }, [countries, parsed.code]);
 
   function emit(nextCode, nextNumber) {
     const combined = `${nextCode}${nextNumber ? ` ${nextNumber}` : ""}`.trim();
     onChange?.(combined);
   }
 
-  function handlePick(next) {
-    setOpen(false);
-    emit(next.code, parsed.number);
-  }
 
-  const filteredCountries = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return countries;
-    return countries.filter((c) => {
-      const name = (c.name || "").toLowerCase();
-      const code = (c.code || "").toLowerCase();
-      return name.includes(q) || code.includes(q);
+  const codeOptions = useMemo(() => {
+    const list = Array.isArray(countries) ? countries : [];
+    const opts = list.map((c) => {
+      const code = String(c.code || "").trim();
+      const name = String(c.name || "").trim();
+      return {
+        value: code,
+        label: `${code}${name ? ` ${name}` : ""}`.trim(),
+        countryName: name,
+        flagPng: String(c.flagPng || ""),
+        flagEmoji: String(c.flagEmoji || ""),
+      };
     });
-  }, [countries, search]);
+
+    // Ensure current (parsed) code is always selectable even if the API hasn't loaded yet.
+    const currentCode = String(parsed.code || "").trim();
+    if (currentCode && !opts.some((o) => o.value === currentCode)) {
+      opts.unshift({ value: currentCode, label: currentCode });
+    }
+
+    // Provide a stable fallback while loading.
+    if (!currentCode && opts.length === 0) {
+      opts.unshift({ value: DEFAULT_CODE, label: DEFAULT_CODE });
+    }
+
+    return opts;
+  }, [countries, parsed.code]);
+
+  const renderFlag = (opt, size = 18) => {
+    const flagPng = String(opt?.flagPng || "");
+    const flagEmoji = String(opt?.flagEmoji || "");
+
+    const boxStyle = {
+      display: "inline-flex",
+      width: 26,
+      height: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      flex: "0 0 auto",
+    };
+
+    if (flagPng) {
+      const src = flagSrc(flagPng, 80);
+      return (
+        <span style={boxStyle}>
+          <Image
+            src={src}
+            width={20}
+            height={14}
+            alt=""
+            style={{ width: 20, height: 14, borderRadius: 2, objectFit: "cover", display: "block" }}
+          />
+        </span>
+      );
+    }
+
+    return (
+      <span style={{ ...boxStyle, fontSize: size, lineHeight: "16px" }} aria-hidden="true">
+        {flagEmoji || "🏳️"}
+      </span>
+    );
+  };
 
   return (
-    <div className="phone-input" ref={rootRef}>
-      <div className={`custom-select ${open ? "open" : ""}`}>
-        <button
-          type="button"
-          className="phone-prefix"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          onClick={() => {
-            setOpen((s) => {
-              const next = !s;
-              if (next) setSearch("");
-              return next;
-            });
+    <div className="phone-input">
+      <div style={{ flex: "0 0 auto" }}>
+        <SelectInput
+          bare
+          showClear={false}
+          value={parsed.code}
+          onChange={(e) => {
+            emit(String(e?.target?.value || DEFAULT_CODE), parsed.number);
           }}
-        >
-          {selected.flagPng ? (
-            useEmojiOnly ? (
-              <span className="flag" aria-hidden="true">{selected.flagEmoji || "🏳️"}</span>
-            ) : (
-              <img
-                className="flag-img"
-                src={flagSrc(selected.flagPng, 80)}
-                srcSet={`${flagSrc(selected.flagPng, 80)} 1x, ${flagSrc(selected.flagPng, 160)} 2x`}
-                width={20}
-                height={14}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                onError={() => setUseEmojiOnly(true)}
-              />
-            )
-          ) : (
-            <span className="flag" aria-hidden="true">{selected.flagEmoji || "🏳️"}</span>
+          disabled={isLoading && (countries || []).length === 0}
+          selectClassName="bg-transparent !border-0 rounded-none !shadow-none !ring-0 focus:!ring-0 focus-visible:!ring-0 outline-none focus:!outline-none w-auto h-full p-0 pl-3 !pr-3 !justify-start gap-2"
+          renderValue={({ hasSelection, selectedOption }) => {
+            const opt = selectedOption || { value: parsed.code, label: parsed.code };
+            return (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {renderFlag(opt)}
+                <span style={{ fontWeight: 600, lineHeight: "20px" }}>{hasSelection ? opt.value : parsed.code}</span>
+              </span>
+            );
+          }}
+          renderOption={(o) => (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {renderFlag(o)}
+              <span style={{ fontWeight: 600 }}>{String(o.value || "")}</span>
+              <span style={{ color: "#6b7280" }}>{String(o.countryName || "")}</span>
+            </span>
           )}
-          <span className="phone-code">{selected.code}</span>
-          <span className="custom-select-caret" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        >
+          {codeOptions.map((o, idx) => (
+            <option
+              key={`${o.value}|${o.countryName || ""}|${idx}`}
+              value={o.value}
+              data-flag-png={o.flagPng}
+              data-flag-emoji={o.flagEmoji}
+              data-country-name={o.countryName}
             >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </span>
-        </button>
-
-        {open && (
-          <div className="phone-menu" role="listbox">
-            <div className="phone-menu-search" role="presentation">
-              <div className="search-box phone-menu-search-box">
-                <span className="search-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="16.65" y1="16.65" x2="21" y2="21" />
-                  </svg>
-                </span>
-                <input
-                  className="search-input phone-menu-input"
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search country or code"
-                  autoFocus
-                />
-              </div>
-            </div>
-            {isLoading && countries.length === 0 ? (
-              <div className="custom-select-item">Loading…</div>
-            ) : (
-              filteredCountries.map((c) => (
-                <div
-                  key={`${c.name}-${c.code}`}
-                  role="option"
-                  aria-selected={c.code === parsed.code}
-                  tabIndex={0}
-                  className={`custom-select-item ${c.code === parsed.code ? "active" : ""}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handlePick(c);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handlePick(c);
-                    }
-                  }}
-                >
-                  <span style={{ display: "inline-flex", width: 32, justifyContent: "center", alignItems: "center" }}>
-                    {c.flagPng ? (
-                      useEmojiOnly ? (
-                        <span aria-hidden="true">{c.flagEmoji || ""}</span>
-                      ) : (
-                        <img
-                          className="flag-img"
-                          src={flagSrc(c.flagPng, 80)}
-                          srcSet={`${flagSrc(c.flagPng, 80)} 1x, ${flagSrc(c.flagPng, 160)} 2x`}
-                          width={20}
-                          height={14}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          onError={() => setUseEmojiOnly(true)}
-                        />
-                      )
-                    ) : (
-                      <span aria-hidden="true">{c.flagEmoji || ""}</span>
-                    )}
-                  </span>
-                  <span style={{ fontWeight: 600, marginRight: 8 }}>{c.code}</span>
-                  <span style={{ color: "#6b7280" }}>{c.name}</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+              {o.label}
+            </option>
+          ))}
+        </SelectInput>
       </div>
 
       <input

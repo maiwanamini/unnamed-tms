@@ -15,6 +15,7 @@ export function useTrucks() {
     _id: t?._id,
     id: t?._id,
     licensePlate: t?.licensePlate || "",
+    vin: t?.vin || "",
     brand: t?.brand || "",
     model: t?.model || "",
     year: t?.year ?? null,

@@ -3,21 +3,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TableFooter from "@/components/TableFooter";
 import TruckStatusPill from "@/components/TruckStatusPill";
+import Tooltip from "@/components/Tooltip";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import PortalSelect from "@/components/PortalSelect";
+import { formatDateDDMMYYYY } from "@/lib/date";
+import { prettyTrailerType } from "@/lib/vehicle";
+import AvatarCircle from "@/components/AvatarCircle";
 
-function formatDate(value) {
-  if (!value) return "";
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const yyyy = String(d.getUTCFullYear());
-  return `${dd}/${mm}/${yyyy}`;
+function Cell({ children }) {
+  return <div className="table-cell-center">{children}</div>;
 }
 
-export default function TrailersTable({ trailers = [], drivers = [], trucks = [], onAssignDriver, onAssignTruck }) {
+export default function TrailersTable({
+  trailers = [],
+  drivers = [],
+  trucks = [],
+  onAssignDriver,
+  onAssignTruck,
+  onToggleStatus,
+  selected,
+  setSelected,
+}) {
   const wrapperRef = useRef(null);
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
@@ -81,6 +88,7 @@ export default function TrailersTable({ trailers = [], drivers = [], trucks = []
     () => [
       { key: "licensePlate", label: "License Plate", width: 140 },
       { key: "trailer", label: "Trailer", width: 260 },
+      { key: "type", label: "Type", width: 160 },
       { key: "status", label: "Status", width: 140 },
       { key: "driver", label: "Driver", width: 180 },
       { key: "truck", label: "Truck", width: 180 },
@@ -122,7 +130,7 @@ export default function TrailersTable({ trailers = [], drivers = [], trucks = []
                     key={c.key}
                     style={{
                       textAlign: "left",
-                      padding: "12px 8px",
+                      padding: "8px 8px",
                       fontWeight: 600,
                       fontSize: 14,
                       color: "#0f172a",
@@ -137,66 +145,131 @@ export default function TrailersTable({ trailers = [], drivers = [], trucks = []
             </thead>
             <tbody>
               {slice.map((t) => (
-                <tr key={t.id}>
-                  <td style={{ padding: "12px 8px" }}>{t.licensePlate || ""}</td>
-                  <td style={{ padding: "12px 8px" }}>{t.trailer || ""}</td>
+                <tr
+                  key={t.id}
+                  onClick={() => setSelected?.(t)}
+                  className={selected?.id === t?.id ? "selected" : ""}
+                  style={{ cursor: setSelected ? "pointer" : "default" }}
+                >
                   <td style={{ padding: "12px 8px" }}>
-                    <TruckStatusPill status={t.status} />
+                    <Cell>
+                      <div>{t.licensePlate || ""}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 14 }}>
+                        {String(t?.trailerNumber || "").trim()}
+                      </div>
+                    </Cell>
                   </td>
-
                   <td style={{ padding: "12px 8px" }}>
-                    {isEditing(t.id, "driver") ? (
-                      <PortalSelect
-                        value={t.driverId || ""}
-                        onChange={(v) => {
-                          onAssignDriver?.(t.id, v || null);
-                        }}
-                        placeholder=""
-                        options={drivers.map((d) => ({ value: d.id, label: d.name }))}
-                        alwaysShowSearch
-                        triggerClassName="assign-select assign-select-trigger"
-                        openOnMount
-                        onClose={() => setEditing(null)}
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className="assign-link"
-                        onClick={() => setEditing({ id: t.id, field: "driver" })}
+                    <Cell>{t.trailer || ""}</Cell>
+                  </td>
+                  <td style={{ padding: "12px 8px" }}>
+                    <Cell>{prettyTrailerType(t?.type) || ""}</Cell>
+                  </td>
+                  <td style={{ padding: "12px 8px" }}>
+                    <Cell>
+                      <Tooltip
+                        label={onToggleStatus ? "Change status" : ""}
+                        wrapperProps={{ style: { display: "inline-flex" } }}
                       >
-                        {t.driverName ? null : <PersonAddAltOutlinedIcon style={{ fontSize: 20 }} />}
-                        {t.driverName ? <span>{t.driverName}</span> : null}
-                      </button>
-                    )}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={() => {
+                            if (!onToggleStatus) return;
+                            const isInactive = String(t.status || "").toLowerCase() === "inactive";
+                            onToggleStatus(t.id, isInactive ? "active" : "inactive");
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            padding: 0,
+                            textAlign: "left",
+                            cursor: onToggleStatus ? "pointer" : "default",
+                          }}
+                        >
+                          <TruckStatusPill status={t.status} />
+                        </button>
+                      </Tooltip>
+                    </Cell>
                   </td>
 
                   <td style={{ padding: "12px 8px" }}>
-                    {isEditing(t.id, "truck") ? (
-                      <PortalSelect
-                        value={t.truckId || ""}
-                        onChange={(v) => {
-                          onAssignTruck?.(t.id, v || null);
-                        }}
-                        placeholder=""
-                        options={trucks.map((tr) => ({ value: tr.id, label: tr.name }))}
-                        alwaysShowSearch
-                        triggerClassName="assign-select assign-select-trigger"
-                        openOnMount
-                        onClose={() => setEditing(null)}
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className="assign-link"
-                        onClick={() => setEditing({ id: t.id, field: "truck" })}
-                      >
-                        {t.truckName ? null : <AddBoxOutlinedIcon style={{ fontSize: 20 }} />}
-                        {t.truckName ? <span>{t.truckName}</span> : null}
-                      </button>
-                    )}
+                    <Cell>
+                      {isEditing(t.id, "driver") ? (
+                        <PortalSelect
+                          value={t.driverId || ""}
+                          onChange={(v) => {
+                            onAssignDriver?.(t.id, v || null);
+                          }}
+                          placeholder=""
+                          options={drivers.map((d) => ({ value: d.id, label: d.name, avatarUrl: d.avatarUrl }))}
+                          alwaysShowSearch
+                          triggerClassName="assign-select assign-select-trigger"
+                          menuClassName="status-dropdown assign-select-dropdown"
+                          openOnMount
+                          onClose={() => setEditing(null)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="assign-link"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={() => setEditing({ id: t.id, field: "driver" })}
+                        >
+                          {t.driverName ? null : <PersonAddAltOutlinedIcon style={{ fontSize: 20 }} />}
+                          {t.driverName ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                              <AvatarCircle
+                                src={String(t?.driverAvatarUrl || "")}
+                                name={String(t.driverName || "")}
+                                seed={String(t.driverId || t.driverName || "")}
+                                size={22}
+                              />
+                              <span className="truncate" style={{ minWidth: 0 }}>
+                                {t.driverName}
+                              </span>
+                            </span>
+                          ) : (
+                            <span>Add driver</span>
+                          )}
+                        </button>
+                      )}
+                    </Cell>
                   </td>
 
-                  <td style={{ padding: "12px 8px" }}>{formatDate(t.createdAt) || ""}</td>
+                  <td style={{ padding: "12px 8px" }}>
+                    <Cell>
+                      {isEditing(t.id, "truck") ? (
+                        <PortalSelect
+                          value={t.truckId || ""}
+                          onChange={(v) => {
+                            onAssignTruck?.(t.id, v || null);
+                          }}
+                          placeholder=""
+                          options={trucks.map((tr) => ({ value: tr.id, label: tr.name }))}
+                          alwaysShowSearch
+                          triggerClassName="assign-select assign-select-trigger"
+                          menuClassName="status-dropdown assign-select-dropdown"
+                          openOnMount
+                          onClose={() => setEditing(null)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="assign-link"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={() => setEditing({ id: t.id, field: "truck" })}
+                        >
+                          {t.truckName ? null : <AddBoxOutlinedIcon style={{ fontSize: 20 }} />}
+                          {t.truckName ? <span>{t.truckName}</span> : <span>Add truck</span>}
+                        </button>
+                      )}
+                    </Cell>
+                  </td>
+
+                  <td style={{ padding: "12px 8px" }}>
+                    <Cell>{formatDateDDMMYYYY(t.createdAt) || ""}</Cell>
+                  </td>
                 </tr>
               ))}
             </tbody>

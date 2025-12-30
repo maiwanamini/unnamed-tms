@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetcher";
-import { Eye, EyeSlash } from "@phosphor-icons/react";
+import { UserCircle } from "@phosphor-icons/react";
+import TextInput from "@/components/TextInput";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,20 +16,27 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const avatarInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const isValidEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || "").trim());
 
   const initials = useMemo(() => {
     const f = String(firstName || "").trim();
     const l = String(lastName || "").trim();
     const a = f ? f[0].toUpperCase() : "";
     const b = l ? l[0].toUpperCase() : "";
-    return `${a}${b}` || "?";
+    return `${a}${b}`;
   }, [firstName, lastName]);
 
   useEffect(() => {
@@ -46,10 +55,19 @@ export default function RegisterPage() {
     event.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    const next = { firstName: "", lastName: "", email: "", password: "", confirmPassword: "" };
+    if (!String(firstName || "").trim()) next.firstName = "Please enter a first name.";
+    if (!String(lastName || "").trim()) next.lastName = "Please enter a last name.";
+    if (!String(email || "").trim()) next.email = "Please enter an email address.";
+    else if (!isValidEmail(email)) next.email = "Please enter a valid email address.";
+    if (!String(password || "").trim()) next.password = "Please enter a password.";
+    if (!String(confirmPassword || "").trim()) next.confirmPassword = "Please confirm your password.";
+    if (password && confirmPassword && password !== confirmPassword) next.confirmPassword = "Passwords do not match.";
+
+    setFieldErrors(next);
+
+    const hasErrors = Object.values(next).some(Boolean);
+    if (hasErrors) return;
 
     setIsSubmitting(true);
 
@@ -66,15 +84,29 @@ export default function RegisterPage() {
         body: formData,
       });
 
-      if (data?.token) {
-        window.localStorage.setItem("tms_token", data.token);
-      }
-      if (data?.user) {
-        window.localStorage.setItem("tms_user", JSON.stringify(data.user));
-      }
-
       const role = String(data?.user?.role || "admin");
       const hasCompany = Boolean(data?.user?.company);
+
+      // Clear any stale persistent auth before writing new state.
+      try {
+        window.localStorage.removeItem("tms_token");
+        window.localStorage.removeItem("tms_user");
+      } catch {
+        // ignore
+      }
+
+      // If the user hasn't created a company yet, keep auth in sessionStorage
+      // so the account isn't persisted until onboarding is complete.
+      const persist = role === "driver" || hasCompany;
+      if (data?.token) {
+        if (persist) window.localStorage.setItem("tms_token", data.token);
+        else window.sessionStorage.setItem("tms_onboarding_token", data.token);
+      }
+      if (data?.user) {
+        if (persist) window.localStorage.setItem("tms_user", JSON.stringify(data.user));
+        else window.sessionStorage.setItem("tms_onboarding_user", JSON.stringify(data.user));
+      }
+
       if (role === "driver") {
         router.push("/unauthorized");
       } else if (!hasCompany) {
@@ -83,7 +115,37 @@ export default function RegisterPage() {
         router.push("/dashboard/orders");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Registration failed");
+      const message = String(e?.data?.message || e?.message || "Registration failed");
+      const field = String(e?.data?.field || "");
+      const code = String(e?.data?.code || "");
+
+      if (field === "email" || code === "EMAIL_IN_USE" || /email already in use/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, email: "This email is already in use." }));
+        return;
+      }
+
+      // Fallback: map common backend required-field message.
+      if (/firstName/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, firstName: "Please enter a first name." }));
+        return;
+      }
+      if (/lastName/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, lastName: "Please enter a last name." }));
+        return;
+      }
+      if (/\bemail\b/i.test(message)) {
+        setFieldErrors((prev) => ({ ...prev, email: "Please enter a valid email address." }));
+        return;
+      }
+      if (/password/i.test(message)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          password: prev.password || "Please enter a password.",
+        }));
+        return;
+      }
+
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +160,7 @@ export default function RegisterPage() {
             <div className="text-sm text-slate-500">Register to continue</div>
           </div>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-6">
+          <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <div className="flex flex-col gap-2">
               <label className="block text-sm font-medium text-slate-700">Profile Picture (Optional)</label>
               <div className="flex items-center gap-4">
@@ -106,8 +168,10 @@ export default function RegisterPage() {
                   {avatarPreviewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarPreviewUrl} alt="Profile picture" className="h-full w-full object-cover" />
-                  ) : (
+                  ) : initials ? (
                     <span>{initials}</span>
+                  ) : (
+                    <UserCircle size={28} weight="fill" className="text-slate-300" />
                   )}
                 </div>
 
@@ -125,7 +189,8 @@ export default function RegisterPage() {
 
                   <button
                     type="button"
-                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide"
+                    className="h-9 px-5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide hover:bg-slate-50 hover:border-slate-300"
+                    style={{ paddingLeft: 16, paddingRight: 16 }}
                     onClick={() => avatarInputRef.current?.click()}
                   >
                     UPLOAD IMAGE
@@ -134,7 +199,8 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     disabled={!avatarFile}
-                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide disabled:opacity-60"
+                    className="h-9 px-5 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 disabled:hover:bg-white disabled:hover:border-slate-200"
+                    style={{ paddingLeft: 16, paddingRight: 16 }}
                     onClick={() => {
                       setAvatarFile(null);
                       if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -147,90 +213,75 @@ export default function RegisterPage() {
               <div className="text-xs text-slate-500">*.png, *.jpg, *.jpeg files up to 10MB</div>
             </div>
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">First name</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="text"
-                autoComplete="given-name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="First name"
-                required
-              />
-            </div>
+            <TextInput
+              label="First name"
+              type="text"
+              autoComplete="given-name"
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                setFieldErrors((p) => ({ ...p, firstName: "" }));
+                setError("");
+              }}
+              placeholder="First name"
+              error={fieldErrors.firstName}
+            />
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Last name</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="text"
-                autoComplete="family-name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last name"
-                required
-              />
-            </div>
+            <TextInput
+              label="Last name"
+              type="text"
+              autoComplete="family-name"
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                setFieldErrors((p) => ({ ...p, lastName: "" }));
+                setError("");
+              }}
+              placeholder="Last name"
+              error={fieldErrors.lastName}
+            />
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Email</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-              />
-            </div>
+            <TextInput
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFieldErrors((p) => ({ ...p, email: "" }));
+                setError("");
+              }}
+              placeholder="you@company.com"
+              error={fieldErrors.email}
+            />
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Password</label>
-              <div className="relative">
-                <input
-                  className="auth-input auth-input--with-icon h-11 mt-0 w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="auth-password-toggle absolute top-1/2 right-2 -translate-y-1/2 text-slate-500"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                </button>
-              </div>
-            </div>
+            <PasswordInput
+              label="Password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((p) => ({ ...p, password: "", confirmPassword: "" }));
+                setError("");
+              }}
+              error={fieldErrors.password}
+              ariaLabelHide="Hide password"
+              ariaLabelShow="Show password"
+            />
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Confirm password</label>
-              <div className="relative">
-                <input
-                  className="auth-input auth-input--with-icon h-11 mt-0 w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  className="auth-password-toggle absolute top-1/2 right-2 -translate-y-1/2 text-slate-500"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                >
-                  {showConfirmPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                </button>
-              </div>
-            </div>
+            <PasswordInput
+              label="Confirm password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setFieldErrors((p) => ({ ...p, confirmPassword: "" }));
+                setError("");
+              }}
+              error={fieldErrors.confirmPassword}
+              ariaLabelHide="Hide confirm password"
+              ariaLabelShow="Show confirm password"
+            />
 
             {error && (
               <div className="text-sm text-red-600" role="alert">
@@ -252,8 +303,8 @@ export default function RegisterPage() {
                 Privacy Policy
               </Link>
               {" and "}
-              <Link href="/policy" className="text-[var(--primary-blue)] font-medium">
-                Policy
+              <Link href="/terms" className="text-[var(--primary-blue)] font-medium">
+                Terms and Conditions
               </Link>
               {"."}
             </div>
