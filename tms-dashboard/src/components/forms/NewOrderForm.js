@@ -12,6 +12,7 @@ import UploadIcon from "@mui/icons-material/Upload";
 import DownloadIcon from "@mui/icons-material/Download";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useOverlay } from "@/hooks/useOverlay";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useOrders } from "@/hooks/useOrders";
@@ -19,7 +20,11 @@ import { useTrucks } from "@/hooks/useTrucks";
 import { useTrailers } from "@/hooks/useTrailers";
 import { useUsers } from "@/hooks/useUsers";
 import { apiFetch } from "@/lib/fetcher";
-import PortalSelect from "@/components/PortalSelect";
+import { formatTrailerLabel, formatTruckLabel } from "@/lib/vehicle";
+import Tooltip from "@/components/Tooltip";
+import TextInput from "@/components/TextInput";
+import SelectInput from "@/components/SelectInput";
+import AddressAutocompleteInput from "@/components/AddressAutocompleteInput";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -98,19 +103,46 @@ function toDateTimeLocalString(date, hour, minute) {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
+function todayDateTimeLocalString() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return toDateTimeLocalString(today, 0, 0);
+}
+
+function isoToDateTimeLocalString(v) {
+  const d = v ? new Date(v) : null;
+  if (!d || Number.isNaN(d.getTime())) return todayDateTimeLocalString();
+  return toDateTimeLocalString(d, d.getHours(), d.getMinutes());
+}
+
+function formatDateTimeLocalForDisplay(v) {
+  const parsed = parseDateTimeLocalString(v);
+  if (!parsed?.date) return "";
+  const dd = pad2(parsed.date.getDate());
+  const mm = pad2(parsed.date.getMonth() + 1);
+  const yyyy = parsed.date.getFullYear();
+  const hh = pad2(parsed.hour ?? 0);
+  const mi = pad2(parsed.minute ?? 0);
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
 function makeStop(type = "pickup") {
   return {
     key: `s-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     type, // pickup | delivery
     address: "",
+    city: "",
+    region: "",
+    postalCode: "",
+    geo: { lat: null, lng: null, mapboxId: null },
     locationName: "",
     reference: "",
-    plannedTime: "", // datetime-local string
+    plannedTime: todayDateTimeLocalString(), // datetime-local string
     note: "",
   };
 }
 
-export default function NewOrderForm() {
+export default function NewOrderForm({ mode = "create", orderId } = {}) {
   const { closeOverlay } = useOverlay();
   const { customers, isLoading: customersLoading } = useCustomers();
   const { trucks, isLoading: trucksLoading, mutate: mutateTrucks } = useTrucks();
@@ -118,9 +150,15 @@ export default function NewOrderForm() {
   const { users, isLoading: usersLoading, mutate: mutateUsers } = useUsers();
   const { mutate: mutateOrders } = useOrders();
 
+  const isEdit = String(mode || "").toLowerCase() === "edit" && Boolean(String(orderId || "").trim());
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({ customerId: "", stopByKey: {} });
+
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [existingStatus, setExistingStatus] = useState("");
+  const [existingCustomerName, setExistingCustomerName] = useState("");
 
   const [touched, setTouched] = useState({ truck: false, driver: false, trailer: false });
 
@@ -134,11 +172,93 @@ export default function NewOrderForm() {
 
   const [stops, setStops] = useState([makeStop("pickup"), makeStop("delivery")]);
 
+  useEffect(() => {
+    if (!isEdit) return;
+
+    let cancelled = false;
+    setLoadingExisting(true);
+    setError("");
+
+    apiFetch(`/orders/${orderId}`)
+      .then((order) => {
+        if (cancelled) return;
+
+        setExistingStatus(String(order?.status || ""));
+        setExistingCustomerName(String(order?.customerName || ""));
+
+        const truckId = String(order?.truck?._id || order?.truck?.id || order?.truck || "");
+        const trailerId = String(order?.trailer?._id || order?.trailer?.id || order?.trailer || "");
+        const driverId = String(order?.driver?._id || order?.driver?.id || order?.driver || "");
+
+        setForm((prev) => ({
+          ...prev,
+          customerId: "", // resolved after customers load
+          reference: String(order?.reference || ""),
+          truckId,
+          trailerId,
+          driverId,
+        }));
+
+        const list = Array.isArray(order?.stops) ? [...order.stops] : [];
+        list.sort((a, b) => (Number(a?.orderIndex) || 0) - (Number(b?.orderIndex) || 0));
+
+        if (!list.length) {
+          setStops([makeStop("pickup"), makeStop("delivery")]);
+          return;
+        }
+
+        setStops(
+          list.map((s) => ({
+            key: `s-${String(s?._id || s?.id || "")}-${Math.random().toString(16).slice(2)}`,
+            id: String(s?._id || s?.id || ""),
+            type: String(s?.type || "pickup") === "pickup" ? "pickup" : "delivery",
+            address: String(s?.address || ""),
+            city: String(s?.city || ""),
+            region: String(s?.region || ""),
+            postalCode: String(s?.postalCode || ""),
+            geo: {
+              lat: typeof s?.geo?.lat === "number" ? s.geo.lat : null,
+              lng: typeof s?.geo?.lng === "number" ? s.geo.lng : null,
+              mapboxId: s?.geo?.mapboxId || null,
+            },
+            locationName: String(s?.locationName || ""),
+            reference: String(s?.reference || ""),
+            plannedTime: isoToDateTimeLocalString(s?.plannedTime),
+            note: String(s?.note || ""),
+          })),
+        );
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.data?.message || e?.message || "Failed to load order");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoadingExisting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, orderId]);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    if (form.customerId) return;
+    const name = String(existingCustomerName || "").trim().toLowerCase();
+    if (!name) return;
+
+    const match = (Array.isArray(customers) ? customers : [])
+      .find((c) => String(c?.name || "").trim().toLowerCase() === name);
+    if (!match) return;
+    setForm((prev) => ({ ...prev, customerId: String(match?.id || match?._id || "") }));
+  }, [isEdit, customers, existingCustomerName, form.customerId]);
+
   const dtpWrapRef = useRef(null);
   const dtpAnchorElRef = useRef(null);
   const dtpMenuElRef = useRef(null);
   const [dtpOpenKey, setDtpOpenKey] = useState(null);
-  const [dtpPos, setDtpPos] = useState({ left: 0, top: 0, minWidth: 0, maxHeight: null });
+  const [dtpPos, setDtpPos] = useState({ left: 0, top: 0, minWidth: 0 });
   const [dtpDraft, setDtpDraft] = useState({ date: null, hour: 0, minute: 0, month: startOfMonthLocal(new Date()) });
   const canUseDOM = typeof window !== "undefined" && typeof document !== "undefined";
 
@@ -154,12 +274,8 @@ export default function NewOrderForm() {
     const baseMinWidth = Math.max(320, rect.width);
     const leftBase = clamp(rect.left, 8, Math.max(8, viewportW - baseMinWidth - 8));
     const gap = 8;
-    const spaceAbove = Math.max(0, rect.top - gap - 8);
-    const spaceBelow = Math.max(0, viewportH - rect.bottom - gap - 8);
-
-    // Prefer placing below the input.
     const topBase = rect.bottom + gap;
-    setDtpPos({ left: leftBase, top: topBase, minWidth: baseMinWidth, maxHeight: spaceBelow || null });
+    setDtpPos({ left: leftBase, top: topBase, minWidth: baseMinWidth });
 
     requestAnimationFrame(() => {
       const menu = dtpMenuElRef.current;
@@ -167,23 +283,15 @@ export default function NewOrderForm() {
 
       const mrect = menu.getBoundingClientRect();
 
-      // Decide placement based on available space.
-      const prefersBottom = spaceBelow >= spaceAbove;
-      const canFitBottom = mrect.height <= spaceBelow;
-      const canFitTop = mrect.height <= spaceAbove;
-      const placeBottom = canFitBottom || (!canFitTop && prefersBottom);
-
-      const maxHeight = placeBottom ? spaceBelow : spaceAbove;
-      const visibleHeight = Math.min(mrect.height, maxHeight);
-
-      let top = placeBottom ? rect.bottom + gap : rect.top - gap - visibleHeight;
-      // Clamp top so it never clips.
-      top = clamp(top, 8, Math.max(8, viewportH - visibleHeight - 8));
+      // Prefer placing below; if it would overflow the viewport, place above.
+      const fitsBelow = topBase + mrect.height + 8 <= viewportH;
+      const topPreferred = fitsBelow ? topBase : rect.top - gap - mrect.height;
+      const top = clamp(topPreferred, 8, Math.max(8, viewportH - mrect.height - 8));
 
       // Clamp left based on measured width.
       const left = clamp(leftBase, 8, Math.max(8, viewportW - mrect.width - 8));
 
-      setDtpPos({ left, top, minWidth: baseMinWidth, maxHeight: maxHeight || null });
+      setDtpPos({ left, top, minWidth: baseMinWidth });
     });
   }, [canUseDOM]);
 
@@ -226,11 +334,10 @@ export default function NewOrderForm() {
     const left = clamp(rect.left, 8, Math.max(8, viewportW - minWidth - 8));
     const gap = 8;
     const top = rect.bottom + gap;
-    const spaceBelow = Math.max(0, viewportH - rect.bottom - gap - 8);
 
-    setDtpPos({ left, top, minWidth, maxHeight: spaceBelow || null });
+    setDtpPos({ left, top, minWidth });
     setDtpDraft({
-      date: parsed?.date || null,
+      date: parsed?.date || baseDate,
       hour: parsed?.hour ?? 0,
       minute: parsed?.minute ?? 0,
       month: startOfMonthLocal(baseDate),
@@ -255,22 +362,31 @@ export default function NewOrderForm() {
   }, [computeDtpPosition, dtpOpenKey]);
 
   const customerOptions = useMemo(
-    () => [{ value: "", label: "Customer" }, ...customers.map((c) => ({ value: c.id, label: c.name || c.id }))],
+    () => customers.map((c) => ({ value: c.id, label: c.name || c.id })),
     [customers]
   );
 
   const truckOptions = useMemo(
-    () => [{ value: "", label: "Plate - Truck" }, ...trucks.map((t) => ({ value: t.id, label: t.licensePlate || t.id }))],
+    () =>
+      trucks
+        .filter((t) => String(t?.status || "").trim().toLowerCase() !== "inactive")
+        .map((t) => ({ value: t.id, label: formatTruckLabel(t) || t.licensePlate || t.id })),
     [trucks]
   );
 
   const trailerOptions = useMemo(
-    () => [{ value: "", label: "Trailer (Optional)" }, ...trailers.map((t) => ({ value: t.id, label: t.licensePlate || t.id }))],
+    () =>
+      trailers
+        .filter((t) => String(t?.status || "").trim().toLowerCase() !== "inactive")
+        .map((t) => ({ value: t.id, label: formatTrailerLabel(t) || t.licensePlate || t.id })),
     [trailers]
   );
 
   const driverOptions = useMemo(
-    () => [{ value: "", label: "Driver" }, ...users.map((u) => ({ value: u.id, label: u.fullName || u.email || u.id }))],
+    () =>
+      users
+        .filter((u) => String(u?.status || "").trim().toLowerCase() !== "inactive")
+        .map((u) => ({ value: u.id, label: u.fullName || u.email || u.id })),
     [users]
   );
 
@@ -434,6 +550,12 @@ export default function NewOrderForm() {
       const customer = selectedCustomer;
       if (!customer) throw new Error("Customer not found");
 
+      const effectiveOrderId = String(orderId || "").trim();
+
+      if (isEdit && !effectiveOrderId) {
+        throw new Error("Missing order id");
+      }
+
       // If user selected a truck and changed driver/trailer, persist those links.
       if (form.truckId) {
         const truckBody = {};
@@ -446,57 +568,131 @@ export default function NewOrderForm() {
         }
       }
 
-      const orderBody = {
-        customerName: customer.name,
-        customerAddress: customer.address,
-        customerPhone: customer.phone,
-        date: new Date().toISOString(),
-        status: "pending",
-      };
+      if (isEdit) {
+        const orderBody = {
+          customerName: customer.name,
+          customerAddress: customer.address,
+          customerPhone: customer.phone,
+        };
 
-      if (form.reference) orderBody.reference = form.reference;
-      if (form.truckId) orderBody.truck = form.truckId;
-      if (form.driverId) orderBody.driver = form.driverId;
+        // Preserve status unless user explicitly changes it elsewhere.
+        if (existingStatus) orderBody.status = String(existingStatus);
 
-      const created = await apiFetch("/orders", { method: "POST", body: orderBody });
-      const orderId = created?._id || created?.id;
-      if (!orderId) throw new Error("Order created but missing id");
+        if (form.reference) orderBody.reference = form.reference;
+        orderBody.truck = form.truckId || null;
+        orderBody.trailer = form.trailerId || null;
+        orderBody.driver = form.driverId || null;
 
-      // Create stops and link them to the order.
-      for (let i = 0; i < stops.length; i++) {
-        const s = stops[i];
-        const plannedTime = s.plannedTime ? new Date(s.plannedTime).toISOString() : undefined;
+        await apiFetch(`/orders/${effectiveOrderId}`, { method: "PUT", body: orderBody });
 
-        await apiFetch("/stops", {
-          method: "POST",
-          body: {
-            orderId,
-            orderIndex: i + 1,
-            type: s.type,
-            locationName: s.locationName,
-            address: s.address,
-            plannedTime,
-            note: s.note,
-            reference: s.reference,
-          },
-        });
+        // Replace stops: clear order.stops, delete existing stop docs, then create the new list.
+        const existingStops = await apiFetch(`/stops?order=${encodeURIComponent(effectiveOrderId)}`);
+        await apiFetch(`/orders/${effectiveOrderId}`, { method: "PUT", body: { stops: [] } });
+
+        for (const st of Array.isArray(existingStops) ? existingStops : []) {
+          const sid = String(st?._id || st?.id || "");
+          if (!sid) continue;
+          // eslint-disable-next-line no-await-in-loop
+          await apiFetch(`/stops/${sid}`, { method: "DELETE" });
+        }
+
+        for (let i = 0; i < stops.length; i++) {
+          const s = stops[i];
+          const plannedTime = s.plannedTime ? new Date(s.plannedTime).toISOString() : undefined;
+
+          const geo = s?.geo && (Number.isFinite(s.geo.lat) || Number.isFinite(s.geo.lng))
+            ? {
+                lat: Number.isFinite(s.geo.lat) ? s.geo.lat : null,
+                lng: Number.isFinite(s.geo.lng) ? s.geo.lng : null,
+                mapboxId: s.geo.mapboxId || null,
+              }
+            : undefined;
+
+          // eslint-disable-next-line no-await-in-loop
+          await apiFetch("/stops", {
+            method: "POST",
+            body: {
+              orderId: effectiveOrderId,
+              orderIndex: i + 1,
+              type: s.type,
+              locationName: s.locationName,
+              address: s.address,
+              city: s.city,
+              region: s.region,
+              postalCode: s.postalCode,
+              geo,
+              plannedTime,
+              note: s.note,
+              reference: s.reference,
+            },
+          });
+        }
+      } else {
+        const orderBody = {
+          customerName: customer.name,
+          customerAddress: customer.address,
+          customerPhone: customer.phone,
+          date: new Date().toISOString(),
+          status: "pending",
+        };
+
+        if (form.reference) orderBody.reference = form.reference;
+        if (form.truckId) orderBody.truck = form.truckId;
+        if (form.trailerId) orderBody.trailer = form.trailerId;
+        if (form.driverId) orderBody.driver = form.driverId;
+
+        const created = await apiFetch("/orders", { method: "POST", body: orderBody });
+        const createdId = created?._id || created?.id;
+        if (!createdId) throw new Error("Order created but missing id");
+
+        // Create stops and link them to the order.
+        for (let i = 0; i < stops.length; i++) {
+          const s = stops[i];
+          const plannedTime = s.plannedTime ? new Date(s.plannedTime).toISOString() : undefined;
+
+          const geo = s?.geo && (Number.isFinite(s.geo.lat) || Number.isFinite(s.geo.lng))
+            ? {
+                lat: Number.isFinite(s.geo.lat) ? s.geo.lat : null,
+                lng: Number.isFinite(s.geo.lng) ? s.geo.lng : null,
+                mapboxId: s.geo.mapboxId || null,
+              }
+            : undefined;
+
+          await apiFetch("/stops", {
+            method: "POST",
+            body: {
+              orderId: createdId,
+              orderIndex: i + 1,
+              type: s.type,
+              locationName: s.locationName,
+              address: s.address,
+              city: s.city,
+              region: s.region,
+              postalCode: s.postalCode,
+              geo,
+              plannedTime,
+              note: s.note,
+              reference: s.reference,
+            },
+          });
+        }
       }
 
       await mutateOrders();
       closeOverlay();
     } catch (err) {
-      setError(err?.message || "Failed to create order");
+      setError(err?.message || (isEdit ? "Failed to update order" : "Failed to create order"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const loading = customersLoading || trucksLoading || trailersLoading || usersLoading;
+  const loading = customersLoading || trucksLoading || trailersLoading || usersLoading || loadingExisting;
 
   return (
     <form onSubmit={handleSubmit} className="overlay-form">
       <div className="overlay-topbar">
-        <div className="overlay-title">NEW ORDER</div>
+        <div className="overlay-title">{isEdit ? "EDIT ORDER" : "NEW ORDER"}</div>
         <div className="overlay-actions">
           <button type="button" className="overlay-clear" onClick={clearAll}>
             <DeleteOutlineIcon style={{ fontSize: 18 }} />
@@ -521,23 +717,26 @@ export default function NewOrderForm() {
           <div className="overlay-field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label>Customer</label>
-              <PortalSelect
+              <SelectInput
+                bare
                 value={form.customerId}
-                onChange={(v) => setField("customerId", v)}
-                options={customerOptions}
-                placeholder="Customer"
+                onChange={(e) => setField("customerId", e.target.value)}
                 disabled={loading}
-                triggerClassName="overlay-input overlay-select-trigger"
-                showCaret
-                alwaysShowSearch
-              />
+              >
+                <option value="">Select Customer</option>
+                {customerOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </SelectInput>
               {fieldErrors.customerId ? <div className="text-xs text-red-600 mt-1">{fieldErrors.customerId}</div> : null}
             </div>
 
             <div>
               <label>Reference (Optional)</label>
-              <input
-                className="overlay-input"
+              <TextInput
+                bare
                 placeholder="Reference (Optional)"
                 value={form.reference}
                 onChange={(e) => setField("reference", e.target.value)}
@@ -551,44 +750,53 @@ export default function NewOrderForm() {
 
           <div className="overlay-field">
             <label>Truck</label>
-            <PortalSelect
+            <SelectInput
+              bare
               value={form.truckId}
-              onChange={(v) => setTruckId(v, "user")}
-              options={truckOptions}
-              placeholder="Plate - Truck"
+              onChange={(e) => setTruckId(e.target.value, "user")}
               disabled={loading}
-              triggerClassName="overlay-input overlay-select-trigger"
-              showCaret
-              alwaysShowSearch
-            />
+            >
+              <option value="">Select Truck</option>
+              {truckOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </SelectInput>
           </div>
 
           <div className="overlay-field">
-            <label>Trailer (Optional)</label>
-            <PortalSelect
+            <label>Trailer</label>
+            <SelectInput
+              bare
               value={form.trailerId}
-              onChange={(v) => setTrailerId(v, "user")}
-              options={trailerOptions}
-              placeholder="Trailer (Optional)"
+              onChange={(e) => setTrailerId(e.target.value, "user")}
               disabled={loading}
-              triggerClassName="overlay-input overlay-select-trigger"
-              showCaret
-              alwaysShowSearch
-            />
+            >
+              <option value="">Select Trailer</option>
+              {trailerOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </SelectInput>
           </div>
 
           <div className="overlay-field">
             <label>Driver</label>
-            <PortalSelect
+            <SelectInput
+              bare
               value={form.driverId}
-              onChange={(v) => setDriverId(v, "user")}
-              options={driverOptions}
-              placeholder="Driver"
+              onChange={(e) => setDriverId(e.target.value, "user")}
               disabled={loading}
-              triggerClassName="overlay-input overlay-select-trigger"
-              showCaret
-              alwaysShowSearch
-            />
+            >
+              <option value="">Select Driver</option>
+              {driverOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </SelectInput>
           </div>
         </div>
 
@@ -621,7 +829,7 @@ export default function NewOrderForm() {
                       justifyContent: "center",
                       gap: 8,
                       padding: 0,
-                      borderRadius: 4,
+                      borderRadius: 8,
                       fontWeight: 700,
                       fontSize: 12,
                       height: 32,
@@ -643,7 +851,7 @@ export default function NewOrderForm() {
                         alignItems: "center",
                         gap: 8,
                         padding: "6px 8px",
-                        borderRadius: 4,
+                        borderRadius: 8,
                         fontWeight: 700,
                         fontSize: 12,
                         height: 32,
@@ -661,72 +869,88 @@ export default function NewOrderForm() {
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      className="btn-ghost stop-action-btn"
-                      onClick={() => updateStop(s.key, { type: s.type === "pickup" ? "delivery" : "pickup" })}
-                      aria-label="Change stop type"
-                      title="Change type"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        padding: 0,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <SyncAltIcon style={{ fontSize: 18 }} />
-                    </button>
+                    <Tooltip label="Change type" wrapperProps={{ style: { display: "inline-flex" } }}>
+                      <button
+                        type="button"
+                        className="btn-ghost stop-action-btn"
+                        onClick={() => updateStop(s.key, { type: s.type === "pickup" ? "delivery" : "pickup" })}
+                        aria-label="Change stop type"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          padding: 0,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <SyncAltIcon style={{ fontSize: 18 }} />
+                      </button>
+                    </Tooltip>
                   </div>
 
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    type="button"
-                    className="btn-ghost stop-action-btn"
-                    onClick={() => moveStop(s.key, -1)}
-                    disabled={idx === 0}
-                    aria-label="Move stop up"
-                    title="Move up"
-                    style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    <ArrowUpwardIcon style={{ fontSize: 18 }} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost stop-action-btn"
-                    onClick={() => moveStop(s.key, 1)}
-                    disabled={idx === stops.length - 1}
-                    aria-label="Move stop down"
-                    title="Move down"
-                    style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    <ArrowDownwardIcon style={{ fontSize: 18 }} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost stop-action-btn stop-action-danger"
-                    onClick={() => removeStop(s.key)}
-                    disabled={stops.length <= 1}
-                    aria-label="Remove stop"
-                    title="Remove"
-                    style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    <CloseIcon style={{ fontSize: 18 }} />
-                  </button>
+                  <Tooltip label={idx === 0 ? "" : "Move up"} wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="btn-ghost stop-action-btn"
+                      onClick={() => moveStop(s.key, -1)}
+                      disabled={idx === 0}
+                      aria-label="Move stop up"
+                      style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <ArrowUpwardIcon style={{ fontSize: 18 }} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label={idx === stops.length - 1 ? "" : "Move down"} wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="btn-ghost stop-action-btn"
+                      onClick={() => moveStop(s.key, 1)}
+                      disabled={idx === stops.length - 1}
+                      aria-label="Move stop down"
+                      style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <ArrowDownwardIcon style={{ fontSize: 18 }} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label={stops.length <= 1 ? "" : "Remove"} wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="btn-ghost stop-action-btn stop-action-danger"
+                      onClick={() => removeStop(s.key)}
+                      disabled={stops.length <= 1}
+                      aria-label="Remove stop"
+                      style={{ width: 32, height: 32, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <CloseIcon style={{ fontSize: 18 }} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
 
               <div className="overlay-field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label>Location Address</label>
-                  <input
-                    className="overlay-input"
+                  <AddressAutocompleteInput
                     placeholder="Location Address"
                     value={s.address}
-                    onChange={(e) => updateStop(s.key, { address: e.target.value })}
+                    onChangeText={(next) => updateStop(s.key, { address: next, city: "", region: "", postalCode: "", geo: { lat: null, lng: null, mapboxId: null } })}
+                    onSelect={(it) =>
+                      updateStop(s.key, {
+                        address: String(it?.label || ""),
+                        city: String(it?.city || ""),
+                        region: String(it?.region || ""),
+                        postalCode: String(it?.postalCode || ""),
+                        geo: {
+                          lat: typeof it?.lat === "number" ? it.lat : null,
+                          lng: typeof it?.lng === "number" ? it.lng : null,
+                          mapboxId: String(it?.id || "") || null,
+                        },
+                      })
+                    }
                   />
                   {fieldErrors.stopByKey?.[s.key]?.address ? (
                     <div className="text-xs text-red-600 mt-1">{fieldErrors.stopByKey[s.key].address}</div>
@@ -735,8 +959,8 @@ export default function NewOrderForm() {
 
                 <div>
                   <label>Location Name</label>
-                  <input
-                    className="overlay-input"
+                  <TextInput
+                    bare
                     placeholder="Location Name"
                     value={s.locationName}
                     onChange={(e) => updateStop(s.key, { locationName: e.target.value })}
@@ -750,8 +974,8 @@ export default function NewOrderForm() {
               <div className="overlay-field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label>Reference (Optional)</label>
-                  <input
-                    className="overlay-input"
+                  <TextInput
+                    bare
                     placeholder="Reference (Optional)"
                     value={s.reference}
                     onChange={(e) => updateStop(s.key, { reference: e.target.value })}
@@ -760,12 +984,30 @@ export default function NewOrderForm() {
 
                 <div>
                   <label>Appointment</label>
-                  <input
-                    className="overlay-input"
-                    type="datetime-local"
-                    value={s.plannedTime}
+                  <TextInput
+                    bare
+                    type="text"
+                    placeholder="dd/mm/yyyy --:--"
+                    value={formatDateTimeLocalForDisplay(s.plannedTime)}
+                    readOnly
+                    rightAdornment={
+                      <button
+                        type="button"
+                        className="auth-password-toggle appointment-calendar-btn"
+                        aria-label="Open calendar"
+                        onMouseDown={(e) => {
+                          // Prevent focus/selection quirks; open our custom calendar.
+                          e.preventDefault();
+                          const wrap = e.currentTarget.closest(".relative");
+                          const input = wrap?.querySelector("input") || e.currentTarget;
+                          openDateTimePopover(s.key, s.plannedTime, input);
+                        }}
+                      >
+                        <CalendarMonthIcon style={{ fontSize: 18 }} />
+                      </button>
+                    }
                     onMouseDown={(e) => {
-                      // Keep the input but use our styled popover instead of the browser picker.
+                      // Use our styled popover instead of the browser picker.
                       e.preventDefault();
                       openDateTimePopover(s.key, s.plannedTime, e.currentTarget);
                     }}
@@ -775,15 +1017,14 @@ export default function NewOrderForm() {
                         openDateTimePopover(s.key, s.plannedTime, e.currentTarget);
                       }
                     }}
-                    onChange={(e) => updateStop(s.key, { plannedTime: e.target.value })}
                   />
                 </div>
               </div>
 
               <div className="overlay-field">
                 <label>Note (Optional)</label>
-                <input
-                  className="overlay-input"
+                <TextInput
+                  bare
                   placeholder="Notes"
                   value={s.note}
                   onChange={(e) => updateStop(s.key, { note: e.target.value })}
@@ -811,15 +1052,13 @@ export default function NewOrderForm() {
                     dtpWrapRef.current = node;
                     dtpMenuElRef.current = node;
                   }}
-                  className="date-range-popover"
+                  className="date-range-popover dtp-popover"
                   style={{
                     position: "fixed",
                     top: dtpPos.top,
                     left: dtpPos.left,
                     minWidth: dtpPos.minWidth,
                     zIndex: 100000,
-                    maxHeight: dtpPos.maxHeight != null ? `${dtpPos.maxHeight}px` : "calc(100vh - 16px)",
-                    overflowY: "auto",
                     overflowX: "hidden",
                   }}
                 >
@@ -858,11 +1097,12 @@ export default function NewOrderForm() {
                           <div className="drp-grid">
                             {buildMonthGridLocal(dtpDraft.month).map((day, i) => {
                               const active = dtpDraft.date && day && isSameDayLocal(day, dtpDraft.date);
+                              const today = day && isSameDayLocal(day, new Date());
                               return (
                                 <button
                                   key={`${i}-${day ? day.toDateString() : 'empty'}`}
                                   type="button"
-                                  className={`drp-day ${day ? '' : 'drp-empty'} ${active ? 'is-start' : ''}`}
+                                  className={`drp-day ${day ? '' : 'drp-empty'} ${active ? 'is-start' : ''} ${today ? 'is-today' : ''}`}
                                   onClick={() => {
                                     if (!day) return;
                                     setDtpDraft((p) => ({ ...p, date: day }));
@@ -916,7 +1156,8 @@ export default function NewOrderForm() {
                           type="button"
                           className="drp-btn drp-cancel"
                           onClick={() => {
-                            setStops((prev) => prev.map((st) => (st.key === dtpOpenKey ? { ...st, plannedTime: "" } : st)));
+                            const next = todayDateTimeLocalString();
+                            setStops((prev) => prev.map((st) => (st.key === dtpOpenKey ? { ...st, plannedTime: next } : st)));
                             setDtpOpenKey(null);
                           }}
                         >

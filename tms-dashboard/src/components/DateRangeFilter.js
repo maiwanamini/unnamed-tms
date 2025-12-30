@@ -36,7 +36,7 @@ function endOfMonthUTC(date) {
   return addDaysUTC(next, -1);
 }
 
-function formatMMDDYYYY(date) {
+function formatDDMMYYYY(date) {
   if (!date) return "";
   const mm = pad2(date.getUTCMonth() + 1);
   const dd = pad2(date.getUTCDate());
@@ -192,8 +192,8 @@ export default function DateRangeFilter({ label = "Choose Date", value, onChange
     if (!appliedStart && !appliedEnd) return "All";
     const s = appliedStart;
     const e = appliedEnd || appliedStart;
-    if (s && e && isSameDayUTC(s, e)) return formatMMDDYYYY(s);
-    return `${formatMMDDYYYY(s)} - ${formatMMDDYYYY(e)}`;
+    if (s && e && isSameDayUTC(s, e)) return formatDDMMYYYY(s);
+    return `${formatDDMMYYYY(s)} - ${formatDDMMYYYY(e)}`;
   }, [appliedEnd, appliedStart]);
 
   const leftMonth = baseMonth;
@@ -308,11 +308,13 @@ export default function DateRangeFilter({ label = "Choose Date", value, onChange
           const active = inRange(d);
           const start = isStart(d);
           const end = isEnd(d);
+          const today = isSameDayUTC(d, nowUTC);
           const cls = [
             "drp-day",
             active ? "in-range" : "",
             start ? "is-start" : "",
             end ? "is-end" : "",
+            today ? "is-today" : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -373,11 +375,11 @@ export default function DateRangeFilter({ label = "Choose Date", value, onChange
                 <div className="drp-inputs">
                   <div className="drp-input">
                     <div className="drp-input-label">Start Date</div>
-                    <input readOnly value={draftStart ? formatMMDDYYYY(draftStart) : ""} placeholder="DD / MM / YYYY" />
+                      <input readOnly value={draftStart ? formatDDMMYYYY(draftStart) : ""} placeholder="DD / MM / YYYY" />
                   </div>
                   <div className="drp-input">
                     <div className="drp-input-label">End Date</div>
-                    <input readOnly value={draftEnd ? formatMMDDYYYY(draftEnd) : ""} placeholder="DD / MM / YYYY" />
+                      <input readOnly value={draftEnd ? formatDDMMYYYY(draftEnd) : ""} placeholder="DD / MM / YYYY" />
                   </div>
                 </div>
 

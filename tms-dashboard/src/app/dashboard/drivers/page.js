@@ -5,7 +5,7 @@ import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import Card from "@/components/Card";
 import Filter from "@/components/Filter";
-import SortByFilter from "@/components/SortByFilter";
+import FilterCheckboxSelect from "@/components/FilterCheckboxSelect";
 import DriversTable from "@/components/DriversTable";
 import { useOverlay } from "@/hooks/useOverlay";
 import { useUsers } from "@/hooks/useUsers";
@@ -30,9 +30,9 @@ export default function Page() {
   const { users, mutate: mutateUsers } = useUsers();
   const { trucks, mutate: mutateTrucks } = useTrucks();
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const [age, setAge] = useState("all");
-  const [truck, setTruck] = useState("all");
+  const [status, setStatus] = useState([]);
+  const [age, setAge] = useState([]);
+  const [truck, setTruck] = useState([]);
 
   const drivers = useMemo(() => {
     return (Array.isArray(users) ? users : [])
@@ -40,7 +40,7 @@ export default function Page() {
       .map((u) => ({
       id: u.id,
       fullName: u.fullName || u.email || "",
-      status: "Active",
+      status: String(u?.status || "active").trim().toLowerCase(),
       phone: u.phone || "",
       email: u.email || "",
       age: 31,
@@ -54,8 +54,8 @@ export default function Page() {
   const statusOptions = useMemo(
     () => [
       { value: "all", label: "All" },
-      { value: "Active", label: "Active" },
-      { value: "Inactive", label: "Inactive" },
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
     ],
     []
   );
@@ -72,7 +72,15 @@ export default function Page() {
   );
 
   const truckOptions = useMemo(
-    () => [{ value: "all", label: "All" }, ...trucks.map((t) => ({ value: t.id, label: t.licensePlate || t.id }))],
+    () =>
+      [{ value: "all", label: "All" }, ...trucks
+        .filter((t) => String(t?.status || "").trim().toLowerCase() !== "inactive")
+        .map((t) => ({ value: t.id, label: t.licensePlate || t.id }))],
+    [trucks]
+  );
+
+  const activeTrucksForDropdown = useMemo(
+    () => trucks.filter((t) => String(t?.status || "").trim().toLowerCase() !== "inactive"),
     [trucks]
   );
 
@@ -88,9 +96,18 @@ export default function Page() {
         if (!hay.includes(q)) return false;
       }
 
-      if (status !== "all" && d.status !== status) return false;
-      if (age !== "all" && !isInAgeGroup(d.age, age)) return false;
-      if (truck !== "all" && (d.truckId || "") !== truck) return false;
+      if (Array.isArray(status) && status.length > 0) {
+        if (!status.map(String).includes(String(d.status || ""))) return false;
+      }
+
+      if (Array.isArray(age) && age.length > 0) {
+        const ok = age.some((g) => isInAgeGroup(d.age, String(g)));
+        if (!ok) return false;
+      }
+
+      if (Array.isArray(truck) && truck.length > 0) {
+        if (!truck.map(String).includes(String(d.truckId || ""))) return false;
+      }
 
       return true;
     });
@@ -109,6 +126,12 @@ export default function Page() {
     // Backend handles syncing relationships.
     return apiFetch(`/trucks/${truckId}`, { method: "PUT", body: { driver: driverId } })
       .then(() => Promise.all([mutateUsers(), mutateTrucks()]))
+      .catch(() => null);
+  };
+
+  const toggleStatus = (userId, nextStatus) => {
+    return apiFetch(`/users/${userId}`, { method: "PUT", body: { status: nextStatus } })
+      .then(() => mutateUsers())
       .catch(() => null);
   };
 
@@ -145,7 +168,7 @@ export default function Page() {
           }}
           onClick={() =>
             openOverlay("driver", {
-              trucks: trucks.map((t) => ({ id: t.id, name: t.licensePlate || t.id })),
+              trucks: activeTrucksForDropdown.map((t) => ({ id: t.id, name: t.licensePlate || t.id })),
               afterSave: () => Promise.all([mutateUsers(), mutateTrucks()]),
             })
           }
@@ -166,9 +189,27 @@ export default function Page() {
               </div>
             </Filter>
 
-            <SortByFilter label="Status" value={status} onChange={setStatus} options={statusOptions} />
-            <SortByFilter label="Age" value={age} onChange={setAge} options={ageOptions} />
-            <SortByFilter label="Truck" value={truck} onChange={setTruck} options={truckOptions} />
+            <FilterCheckboxSelect
+              label="Status"
+              value={Array.isArray(status) ? status : []}
+              onChange={setStatus}
+              placeholder="All"
+              options={statusOptions.filter((o) => o.value !== "all")}
+            />
+            <FilterCheckboxSelect
+              label="Age"
+              value={Array.isArray(age) ? age : []}
+              onChange={setAge}
+              placeholder="All"
+              options={ageOptions.filter((o) => o.value !== "all")}
+            />
+            <FilterCheckboxSelect
+              label="Truck"
+              value={Array.isArray(truck) ? truck : []}
+              onChange={setTruck}
+              placeholder="All"
+              options={truckOptions.filter((o) => o.value !== "all")}
+            />
           </div>
         </div>
       </Card>
@@ -177,8 +218,9 @@ export default function Page() {
       <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
         <DriversTable
           drivers={visibleDrivers}
-          trucks={trucks.map((t) => ({ id: t.id, name: t.licensePlate || t.id }))}
+          trucks={activeTrucksForDropdown.map((t) => ({ id: t.id, name: t.licensePlate || t.id }))}
           onAssignTruck={assignTruck}
+          onToggleStatus={toggleStatus}
         />
       </Card>
     </div>

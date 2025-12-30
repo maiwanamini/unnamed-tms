@@ -2,16 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import TableFooter from "@/components/TableFooter";
-
-function formatDate(value) {
-  if (!value) return "";
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const yyyy = String(d.getUTCFullYear());
-  return `${dd}/${mm}/${yyyy}`;
-}
+import { formatDateDDMMYYYY } from "@/lib/date";
 
 function formatAddress(addr) {
   if (!addr) return "";
@@ -32,7 +23,7 @@ function formatAddress(addr) {
   return String(addr);
 }
 
-export default function CustomersTable({ customers = [] }) {
+export default function CustomersTable({ customers = [], selected, setSelected }) {
   const wrapperRef = useRef(null);
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
@@ -120,7 +111,7 @@ export default function CustomersTable({ customers = [] }) {
                     key={c.key}
                     style={{
                       textAlign: "left",
-                      padding: "12px 8px",
+                      padding: "8px 8px",
                       fontWeight: 600,
                       fontSize: 14,
                       color: "#0f172a",
@@ -135,13 +126,18 @@ export default function CustomersTable({ customers = [] }) {
             </thead>
             <tbody>
               {getSlice().map((c) => (
-                <tr key={c._id || c.id}>
+                <tr
+                  key={c._id || c.id}
+                  onClick={() => setSelected?.(c)}
+                  className={selected?.id === c?.id ? "selected" : ""}
+                  style={{ cursor: setSelected ? "pointer" : "default" }}
+                >
                   <td style={{ padding: "12px 8px" }}>{c.name || ""}</td>
                   <td style={{ padding: "12px 8px" }}>{c.contactName || ""}</td>
                   <td style={{ padding: "12px 8px" }}>{c.phone || ""}</td>
                   <td style={{ padding: "12px 8px" }}>{c.email || ""}</td>
                   <td style={{ padding: "12px 8px" }}>{formatAddress(c.address) || ""}</td>
-                  <td style={{ padding: "12px 8px" }}>{formatDate(c.createdAt || c.created_at) || ""}</td>
+                  <td style={{ padding: "12px 8px" }}>{formatDateDDMMYYYY(c.createdAt || c.created_at) || ""}</td>
                 </tr>
               ))}
             </tbody>

@@ -7,15 +7,19 @@ import Card from "@/components/Card";
 import Filter from "@/components/Filter";
 import SortByFilter from "@/components/SortByFilter";
 import CustomersTable from "@/components/CustomersTable";
+import CustomerDetailPanel from "@/components/CustomerDetailPanel";
 import { useOverlay } from "@/hooks/useOverlay";
 import { useCustomers } from "@/hooks/useCustomers";
+import { apiFetch } from "@/lib/fetcher";
 
 export default function CustomersPage() {
   const { openOverlay } = useOverlay();
-  const { customers, isLoading } = useCustomers();
+  const { customers, isLoading, mutate } = useCustomers();
 
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("createdAtDesc");
+  const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const sortOptions = useMemo(
     () => [
@@ -62,11 +66,34 @@ export default function CustomersPage() {
     return sorted;
   }, [customers, query, sortBy]);
 
+  // Close panel if the selected row is no longer visible.
+  const selectedId = selected?.id;
+  const resolvedSelected = useMemo(() => {
+    if (!selectedId) return null;
+    return visibleCustomers.find((c) => c.id === selectedId) || null;
+  }, [selectedId, visibleCustomers]);
+
   const showLoading = Boolean(isLoading);
 
+  const handleEdit = () => {
+    if (!resolvedSelected) return;
+    openOverlay("customer", { mode: "edit", customer: resolvedSelected });
+  };
+
+  const handleDelete = async () => {
+    if (!resolvedSelected?.id) return;
+    setDeleting(true);
+    try {
+      await apiFetch(`/clients/${resolvedSelected.id}`, { method: "DELETE" });
+      await mutate();
+      setSelected(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <>
-      <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0">
         {/* Header (non-scrolling) */}
         <div
           className="card"
@@ -103,32 +130,57 @@ export default function CustomersPage() {
           </button>
         </div>
 
-        {/* Filters row (Search + Sort only) */}
-        <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
-          <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
-            <div className="filters-row flex flex-wrap gap-2 w-full items-end" style={{ marginTop: 0, marginBottom: 0 }}>
-              <Filter label={"Search"}>
-                <div className="search-box" style={{ width: 242 }}>
-                  <SearchIcon className="search-icon" />
-                  <input
-                    className="search-input"
-                    placeholder="Search..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
+        {/* Main two-column grid: left table + right detail (when selected) */}
+        <div
+          className="dashboard-main"
+          style={{
+            display: "grid",
+            gridTemplateColumns: resolvedSelected ? "minmax(0,2fr) minmax(320px,380px)" : "minmax(0,1fr)",
+            gap: 0,
+            flex: "1 1 0%",
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
+          {/* Left column: filters + table */}
+          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+            <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
+              <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
+                <div className="filters-row flex flex-wrap gap-2 w-full items-end" style={{ marginTop: 0, marginBottom: 0 }}>
+                  <Filter label={"Search"}>
+                    <div className="search-box" style={{ width: 242 }}>
+                      <SearchIcon className="search-icon" />
+                      <input className="search-input" placeholder="Search..." value={query} onChange={(e) => setQuery(e.target.value)} />
+                    </div>
+                  </Filter>
+                  <div style={{ width: 1, height: 40, backgroundColor: "#e5e7eb", alignSelf: "flex-end" }} />
+                  <SortByFilter value={sortBy} onChange={setSortBy} options={sortOptions} />
                 </div>
-              </Filter>
-              <div style={{ width: 1, height: 40, backgroundColor: "#e5e7eb", alignSelf: "flex-end" }} />
-              <SortByFilter value={sortBy} onChange={setSortBy} options={sortOptions} />
-            </div>
-          </div>
-        </Card>
+              </div>
+            </Card>
 
-        {/* Table */}
-        <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
-          {showLoading ? <p style={{ padding: 16 }}>Loading customers…</p> : <CustomersTable customers={visibleCustomers} />}
-        </Card>
+            <Card className="card card-no-hpad flex-1 min-h-0" style={{ minWidth: 0, padding: 0, display: "flex", flexDirection: "column" }}>
+              {showLoading ? (
+                <p style={{ padding: 16 }}>Loading customers…</p>
+              ) : (
+                <CustomersTable customers={visibleCustomers} selected={resolvedSelected} setSelected={setSelected} />
+              )}
+            </Card>
+          </div>
+
+          {/* Right column: detail panel */}
+          {resolvedSelected ? (
+            <aside className="w-full flex flex-col bg-white min-h-0" style={{ flexShrink: 0, height: "100%", overflow: "hidden" }}>
+              <CustomerDetailPanel
+                selected={resolvedSelected}
+                onClose={() => setSelected(null)}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                deleting={deleting}
+              />
+            </aside>
+          ) : null}
+        </div>
       </div>
-    </>
   );
 }

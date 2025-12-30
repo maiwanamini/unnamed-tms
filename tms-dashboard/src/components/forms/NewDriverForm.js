@@ -5,7 +5,8 @@ import { useOverlay } from "@/hooks/useOverlay";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
 import { apiFetch } from "@/lib/fetcher";
-import PortalSelect from "@/components/PortalSelect";
+import TextInput from "@/components/TextInput";
+import SelectInput from "@/components/SelectInput";
 
 function makeDriverId() {
   const n = Date.now() % 10000;
@@ -77,6 +78,7 @@ export default function NewDriverForm() {
       email: form.email,
       phone: form.phone,
       password: form.password,
+      status: "active",
     };
 
     try {
@@ -155,8 +157,8 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>First name</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
               placeholder="Enter first name"
               value={form.firstName}
               onChange={(e) => update("firstName", e.target.value)}
@@ -166,8 +168,8 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>Last name</label>
-            <input
-              className="overlay-input"
+            <TextInput
+              bare
               placeholder="Enter last name"
               value={form.lastName}
               onChange={(e) => update("lastName", e.target.value)}
@@ -183,9 +185,10 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>Driver E-mail</label>
-            <input
-              className="overlay-input"
-              placeholder="planning@customer.com"
+            <TextInput
+              bare
+              type="email"
+              placeholder="Enter driver email"
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
             />
@@ -194,9 +197,9 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>Password</label>
-            <input
-              className="overlay-input"
-              placeholder="Enter password"
+            <TextInput
+              bare
+              placeholder="Enter driver password"
               type="text"
               autoComplete="new-password"
               value={form.password}
@@ -211,16 +214,14 @@ export default function NewDriverForm() {
 
           <div className="overlay-field">
             <label>Truck</label>
-            <PortalSelect
-              value={form.truckId}
-              onChange={(v) => update("truckId", v)}
-              options={[
-                { value: "", label: "None" },
-                ...trucks.map((t) => ({ value: t.id, label: t.name })),
-              ]}
-              placeholder="None"
-              triggerClassName="overlay-input overlay-select-trigger"
-            />
+            <SelectInput bare value={form.truckId} onChange={(e) => update("truckId", e.target.value)}>
+              <option value="">None</option>
+              {trucks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </SelectInput>
           </div>
         </div>
       </div>

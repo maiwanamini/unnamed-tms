@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetcher";
+import PhoneInput from "@/components/PhoneInput";
+import TextInput from "@/components/TextInput";
 
 export default function CreateCompanyPage() {
   const router = useRouter();
@@ -19,18 +21,10 @@ export default function CreateCompanyPage() {
 
   const isValidEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || "").trim());
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("tms_user");
-      if (!raw) return;
-      const u = JSON.parse(raw);
-      const role = String(u?.role || "admin");
-      if (role === "driver") router.replace("/unauthorized");
-      if (u?.company) router.replace("/dashboard/orders");
-    } catch {
-      // ignore
-    }
-  }, [router]);
+  const companyInitial = useMemo(() => {
+    const n = String(name || "").trim();
+    return n ? n[0].toUpperCase() : "";
+  }, [name]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -43,6 +37,21 @@ export default function CreateCompanyPage() {
       URL.revokeObjectURL(next);
     };
   }, [logoFile]);
+
+  useEffect(() => {
+    try {
+      const raw =
+        window.localStorage.getItem("tms_user") ||
+        window.sessionStorage.getItem("tms_onboarding_user");
+      if (!raw) return;
+      const u = JSON.parse(raw);
+      const role = String(u?.role || "admin");
+      if (role === "driver") router.replace("/unauthorized");
+      if (u?.company) router.replace("/dashboard/orders");
+    } catch {
+      // ignore
+    }
+  }, [router]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -61,17 +70,42 @@ export default function CreateCompanyPage() {
     setSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("email", email);
-      formData.append("phone", phone);
-      if (String(address || "").trim()) formData.append("address", address);
-      if (logoFile) formData.append("logo", logoFile);
+      const trimmedAddress = String(address || "").trim();
+
+      const body = logoFile
+        ? (() => {
+            const fd = new FormData();
+            fd.append("name", name);
+            fd.append("email", email);
+            fd.append("phone", phone);
+            if (trimmedAddress) fd.append("address", trimmedAddress);
+            fd.append("logo", logoFile);
+            return fd;
+          })()
+        : {
+            name,
+            email,
+            phone,
+            address: trimmedAddress ? address : undefined,
+          };
 
       const data = await apiFetch("/companies", {
         method: "POST",
-        body: formData,
+        body,
       });
+
+      // Publish onboarding auth (sessionStorage -> localStorage) now that the
+      // company exists.
+      try {
+        const onboardingToken = window.sessionStorage.getItem("tms_onboarding_token");
+        if (onboardingToken) {
+          window.localStorage.setItem("tms_token", onboardingToken);
+          window.sessionStorage.removeItem("tms_onboarding_token");
+        }
+        window.sessionStorage.removeItem("tms_onboarding_user");
+      } catch {
+        // ignore
+      }
 
       if (data?.user) {
         window.localStorage.setItem("tms_user", JSON.stringify(data.user));
@@ -102,14 +136,16 @@ export default function CreateCompanyPage() {
             <div className="flex flex-col gap-2">
               <label className="block text-sm font-medium text-slate-700">Company Logo (Optional)</label>
               <div className="flex items-center gap-4">
-                {logoPreviewUrl ? (
-                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoPreviewUrl} alt="Company logo" className="h-full w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="h-12 w-12 rounded-lg border border-slate-200 bg-slate-50" aria-hidden="true" />
-                )}
+                <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 font-semibold">
+                  {logoPreviewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoPreviewUrl} alt="Company logo" className="h-full w-full object-contain" />
+                  ) : companyInitial ? (
+                    <span>{companyInitial}</span>
+                  ) : (
+                    <span className="text-slate-300 text-xs font-semibold">LOGO</span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-3">
                   <input
@@ -125,7 +161,8 @@ export default function CreateCompanyPage() {
 
                   <button
                     type="button"
-                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide"
+                    className="h-9 px-5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold tracking-wide hover:bg-slate-50 hover:border-slate-300"
+                    style={{ paddingLeft: 16, paddingRight: 16 }}
                     onClick={() => logoInputRef.current?.click()}
                   >
                     UPLOAD IMAGE
@@ -134,7 +171,8 @@ export default function CreateCompanyPage() {
                   <button
                     type="button"
                     disabled={!logoFile}
-                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide disabled:opacity-60"
+                    className="h-9 px-5 rounded-lg border border-slate-200 bg-white text-slate-500 text-xs font-semibold tracking-wide hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 disabled:hover:bg-white disabled:hover:border-slate-200"
+                    style={{ paddingLeft: 16, paddingRight: 16 }}
                     onClick={() => {
                       setLogoFile(null);
                       if (logoInputRef.current) logoInputRef.current.value = "";
@@ -147,61 +185,52 @@ export default function CreateCompanyPage() {
               <div className="text-xs text-slate-500">*.png, *.jpg, *.jpeg files up to 10MB</div>
             </div>
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Company name</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setFieldErrors((p) => ({ ...p, name: "" }));
-                }}
-                placeholder="Company name"
-              />
-              {fieldErrors.name ? <div className="text-xs text-red-600 mt-1">{fieldErrors.name}</div> : null}
-            </div>
+            <TextInput
+              label="Company name"
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setFieldErrors((p) => ({ ...p, name: "" }));
+              }}
+              placeholder="Company name"
+              error={fieldErrors.name}
+            />
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Company email</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setFieldErrors((p) => ({ ...p, email: "" }));
-                }}
-                placeholder="company@email.com"
-              />
-              {fieldErrors.email ? <div className="text-xs text-red-600 mt-1">{fieldErrors.email}</div> : null}
-            </div>
+            <TextInput
+              label="Company email"
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFieldErrors((p) => ({ ...p, email: "" }));
+              }}
+              placeholder="company@email.com"
+              error={fieldErrors.email}
+            />
 
             <div className="flex flex-col gap-0">
               <label className="block text-sm font-medium text-slate-700">Phone</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="tel"
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
-                  setFieldErrors((p) => ({ ...p, phone: "" }));
-                }}
-                placeholder="Phone"
-              />
+              <div className="auth-phone">
+                <PhoneInput
+                  value={phone}
+                  placeholder="Phone"
+                  onChange={(v) => {
+                    setPhone(v);
+                    setFieldErrors((p) => ({ ...p, phone: "" }));
+                  }}
+                />
+              </div>
               {fieldErrors.phone ? <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div> : null}
             </div>
 
-            <div className="flex flex-col gap-0">
-              <label className="block text-sm font-medium text-slate-700">Address</label>
-              <input
-                className="auth-input h-11 mt-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-[var(--primary-blue)]"
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Address (optional)"
-              />
-            </div>
+            <TextInput
+              label="Address"
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Address (optional)"
+            />
 
             {error ? (
               <div className="text-sm text-red-600" role="alert">

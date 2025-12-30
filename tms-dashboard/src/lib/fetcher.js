@@ -14,6 +14,10 @@ export function toApiUrl(input) {
 export function getAuthToken() {
   try {
     if (typeof window === "undefined") return null;
+    // During onboarding (registered but no company yet), we keep the token in
+    // sessionStorage so the account isn't "published" to a persistent login.
+    const onboardingToken = window.sessionStorage?.getItem("tms_onboarding_token");
+    if (onboardingToken) return onboardingToken;
     return window.localStorage.getItem("tms_token");
   } catch {
     return null;
