@@ -85,7 +85,7 @@ export default function CustomerDetailPanel({ selected, onClose, onEdit, onDelet
         </button>
         <button
           type="button"
-          className="btn-primary"
+          className="btn-danger"
           onClick={() => setConfirmOpen(true)}
           disabled={Boolean(deleting)}
           style={{ flex: 1 }}

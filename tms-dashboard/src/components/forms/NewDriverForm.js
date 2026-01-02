@@ -18,14 +18,19 @@ export default function NewDriverForm() {
 
   const trucks = data?.trucks || [];
   const afterSave = data?.afterSave;
+  const mode = String(data?.mode || "create").toLowerCase();
+  const isEdit = mode === "edit";
+  const existing = data?.driver || null;
+  const existingId = String(existing?.id || existing?._id || "");
+  const existingTruckId = String(existing?.truckId || existing?.truck?._id || existing?.truck?.id || "");
 
   const initial = {
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
+    firstName: isEdit ? String(existing?.firstName || "") : "",
+    lastName: isEdit ? String(existing?.lastName || "") : "",
+    phone: isEdit ? String(existing?.phone || "") : "",
+    email: isEdit ? String(existing?.email || "") : "",
     password: "",
-    truckId: "",
+    truckId: isEdit ? existingTruckId : "",
   };
 
   const [form, setForm] = useState(initial);
@@ -62,7 +67,7 @@ export default function NewDriverForm() {
     if (!String(form.lastName || "").trim()) nextErrors.lastName = "Please enter a last name.";
     if (!String(form.email || "").trim()) nextErrors.email = "Please enter an email address.";
     else if (!isValidEmail(form.email)) nextErrors.email = "Please enter a valid email address.";
-    if (!String(form.password || "").trim()) nextErrors.password = "Please enter a password.";
+    if (!isEdit && !String(form.password || "").trim()) nextErrors.password = "Please enter a password.";
 
     const hasErrors = Object.values(nextErrors).some(Boolean);
     if (hasErrors) {
@@ -77,22 +82,32 @@ export default function NewDriverForm() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      password: form.password,
-      status: "active",
     };
 
     try {
-      const created = await apiFetch("/users", { method: "POST", body: payload });
-      const createdUserId = created?.user?._id || created?.user?.id;
+      let userId = existingId;
 
-      if (form.truckId && createdUserId) {
-        await apiFetch(`/trucks/${form.truckId}`, { method: "PUT", body: { driver: createdUserId } });
+      if (isEdit) {
+        if (!existingId) throw new Error("Missing driver id");
+        await apiFetch(`/users/${existingId}`, { method: "PUT", body: payload });
+      } else {
+        const created = await apiFetch("/users", { method: "POST", body: { ...payload, password: form.password, status: "active" } });
+        userId = created?.user?._id || created?.user?.id;
+      }
+
+      // Sync truck assignment if changed.
+      const nextTruckId = String(form.truckId || "");
+      if (existingTruckId && existingTruckId !== nextTruckId) {
+        await apiFetch(`/trucks/${existingTruckId}`, { method: "PUT", body: { driver: null } });
+      }
+      if (nextTruckId && userId) {
+        await apiFetch(`/trucks/${nextTruckId}`, { method: "PUT", body: { driver: userId } });
       }
 
       await afterSave?.();
       closeOverlay();
     } catch (e) {
-      const message = String(e?.data?.message || e?.message || "Failed to create driver");
+      const message = String(e?.data?.message || e?.message || (isEdit ? "Failed to update driver" : "Failed to create driver"));
       const field = String(e?.data?.field || "");
       const code = String(e?.data?.code || "");
 
@@ -133,7 +148,7 @@ export default function NewDriverForm() {
   return (
     <form onSubmit={handleSubmit} className="overlay-form">
       <div className="overlay-topbar">
-        <div className="overlay-title">ADD DRIVER</div>
+        <div className="overlay-title">{isEdit ? "EDIT DRIVER" : "ADD DRIVER"}</div>
         <div className="overlay-actions">
           <button type="button" className="overlay-clear" onClick={clearAll}>
             <DeleteOutlineIcon style={{ fontSize: 18 }} />

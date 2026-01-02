@@ -6,6 +6,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhoneInput from "@/components/PhoneInput";
 import TextInput from "@/components/TextInput";
+import AddressAutocompleteInput from "@/components/AddressAutocompleteInput";
 import { apiFetch } from "@/lib/fetcher";
 
 export default function NewCustomerForm() {
@@ -141,11 +142,14 @@ export default function NewCustomerForm() {
 
           <div className="overlay-field">
             <label>Address</label>
-            <TextInput
-              bare
-              placeholder="Enter Address"
+            <AddressAutocompleteInput
               value={form.address}
-              onChange={(e) => update("address", e.target.value)}
+              placeholder="Enter Address"
+              onChangeText={(v) => update("address", v)}
+              onSelect={(it) => {
+                const label = String(it?.label || "").trim();
+                if (label) update("address", label);
+              }}
             />
             {fieldErrors.address ? <div className="text-xs text-red-600 mt-1">{fieldErrors.address}</div> : null}
           </div>

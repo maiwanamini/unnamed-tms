@@ -27,6 +27,9 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
+  const isDelete = /delete/i.test(String(confirmLabel || "")) || /delete/i.test(String(title || ""));
+  const confirmClassName = isDelete ? "btn-danger" : "btn-primary";
+
 
   const content = (
     <div
@@ -42,7 +45,7 @@ export default function ConfirmDialog({
           <button type="button" className="btn-outline" onClick={() => onCancel?.()}>
             {cancelLabel}
           </button>
-          <button type="button" className="btn-primary" onClick={() => onConfirm?.()} disabled={confirmDisabled}>
+          <button type="button" className={confirmClassName} onClick={() => onConfirm?.()} disabled={confirmDisabled}>
             {confirmLabel}
           </button>
         </div>
