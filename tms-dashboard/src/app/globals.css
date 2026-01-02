@@ -721,6 +721,34 @@ a {
   background: #e5e7eb;
 }
 
+.btn-danger {
+  background: #c42c2c !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-danger:hover {
+  opacity: 0.92;
+}
+
+.btn-danger:disabled {
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
+  cursor: default;
+  opacity: 1;
+}
+
+.btn-danger:disabled:hover {
+  opacity: 1;
+}
+
 .btn-ghost {
   background: #e5e7eb;
   color: #374151;

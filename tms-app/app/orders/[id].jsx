@@ -27,6 +27,21 @@ export default function OrderDetail() {
   const { mutate: globalMutate } = useSWRConfig();
   const [showCompleted, setShowCompleted] = useState(false);
 
+  const parseDate = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const isSameLocalDay = (a, b) => {
+    if (!a || !b) return false;
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  };
+
   // Fetch order data
   const { data: order, mutate: mutateOrder } = useSWR(
     token && id ? [`${api.orders}/${id}`, token] : null,
@@ -41,6 +56,13 @@ export default function OrderDetail() {
 
   const stops = Array.isArray(stopsData) ? stopsData : stopsData?.data || [];
   const stopCount = stops.length;
+
+  const earliestPlannedStopDate = stops
+    .map((stop) => parseDate(stop?.plannedTime))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const isOrderToday = isSameLocalDay(earliestPlannedStopDate, new Date());
 
   const updateOrderStatus = async (newStatus) => {
     try {
@@ -197,7 +219,8 @@ export default function OrderDetail() {
             const originalIndex = stops.findIndex((s) => s._id === stop._id);
             const isCurrentOrFirst =
               originalIndex === currentStopIndex || originalIndex === 0;
-            const showOnLocationButton = isCurrentOrFirst || stop.completed;
+            const showOnLocationButton =
+              (isCurrentOrFirst || stop.completed) && isOrderToday;
             const stopType = stop.type ? String(stop.type).toLowerCase() : null;
             const stopTagVariant =
               stopType === "pickup" || stopType === "pick-up"

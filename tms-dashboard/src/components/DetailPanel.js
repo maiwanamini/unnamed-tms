@@ -8,6 +8,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import FlagIcon from '@mui/icons-material/Flag';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import RouteIcon from '@mui/icons-material/Route';
 import NoteIcon from '@mui/icons-material/Note';
 import SearchIcon from '@mui/icons-material/Search';
@@ -35,6 +37,44 @@ const FALLBACK_STOPS = [
 
 export default function DetailPanel({ selected, onClose }) {
   const stops = selected?.stops || FALLBACK_STOPS;
+
+  const normalizedStatus = String(selected?.status || "").trim().toLowerCase();
+  const isCompletedOrder = normalizedStatus === "completed";
+
+  const extraInfo = selected?.extraInfo || null;
+
+  const safeDate = (v) => {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const formatDateTime = (v) => {
+    const d = safeDate(v);
+    if (!d) return "—";
+    return d.toLocaleString();
+  };
+
+  const formatDuration = (start, end) => {
+    const a = safeDate(start);
+    const b = safeDate(end);
+    if (!a || !b) return "—";
+    const ms = b.getTime() - a.getTime();
+    if (!Number.isFinite(ms) || ms < 0) return "—";
+    const totalMinutes = Math.round(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  };
+
+  const formatNumber = (v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    return String(Math.round(n * 10) / 10);
+  };
 
   const driverName = selected?.driver && selected.driver !== "Driver" ? String(selected.driver) : "";
   const driverPhone = selected?.driverPhone ? String(selected.driverPhone) : "";
@@ -590,179 +630,310 @@ export default function DetailPanel({ selected, onClose }) {
 
     <div className="detail-divider" style={{ height: 1, width: '100%', background: '#e5e7eb', marginTop: 16, marginBottom: 16 }} />
 
-      {/* Truck */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {hasTruck ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{String(selected?.truck || selected?.truckPlate || "")}</div>
-                {prettyTruckType(selected?.truckType) ? (
-                  <div style={{ color: "#9ca3af", fontSize: 14 }}>{prettyTruckType(selected?.truckType)}</div>
-                ) : null}
+      {isCompletedOrder ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: 0.2 }}>Driver Report</div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ fontWeight: 600, fontSize: 16 }}>{hasTruck ? String(selected?.truck || selected?.truckPlate || "") : "No truck"}</div>
+                  {hasTruck && prettyTruckType(selected?.truckType) ? (
+                    <div style={{ color: "#9ca3af", fontSize: 14 }}>{prettyTruckType(selected?.truckType)}</div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-            <div className="plate-actions">
-              <Tooltip label="Change truck" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost change-truck"
-                  aria-label="Change truck"
-                  onClick={() => {
-                    openAssignPicker("truck");
-                  }}
-                  disabled={assigning}
-                >
-                  <SwapHorizIcon />
-                </button>
-              </Tooltip>
-              <Tooltip label="Remove truck" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost unassign-truck"
-                  aria-label="Remove truck"
-                  onClick={unassignTruck}
-                  disabled={assigning}
-                >
-                  <CloseIcon />
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-        ) : null}
 
-        {!hasTruck ? (
-          <button
-            type="button"
-            className="assign-btn"
-            onClick={() => {
-              openAssignPicker("truck");
-            }}
-          >
-            ASSIGN TRUCK
-          </button>
-        ) : null}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ fontWeight: 600, fontSize: 16 }}>{hasTrailer ? String(selected?.trailer || selected?.trailerPlate || "") : "No trailer"}</div>
+                  {hasTrailer && (String(selected?.trailerNumber || "").trim() || prettyTrailerType(selected?.trailerType)) ? (
+                    <div style={{ color: "#9ca3af", fontSize: 14 }}>
+                      {[String(selected?.trailerNumber || "").trim(), prettyTrailerType(selected?.trailerType)].filter(Boolean).join(" ")}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
-        {renderAssignPicker("truck")}
-      </div>
-
-      {/* Trailer */}
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-        {hasTrailer ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{String(selected?.trailer || selected?.trailerPlate || "")}</div>
-                {String(selected?.trailerNumber || "").trim() || prettyTrailerType(selected?.trailerType) ? (
-                  <div style={{ color: "#9ca3af", fontSize: 14 }}>
-                    {[String(selected?.trailerNumber || "").trim(), prettyTrailerType(selected?.trailerType)].filter(Boolean).join(" ")}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                  <AvatarCircle src={driverAvatarUrl} name={driverName} seed={selected?.driverId || driverName} size={44} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {driverName || "Driver"}
+                    </div>
                   </div>
-                ) : null}
+                </div>
               </div>
             </div>
-            <div className="plate-actions">
-              <Tooltip label="Change trailer" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost change-trailer"
-                  aria-label="Change trailer"
-                  onClick={() => {
-                    openAssignPicker("trailer");
-                  }}
-                  disabled={assigning}
-                >
-                  <SwapHorizIcon />
-                </button>
-              </Tooltip>
-              <Tooltip label="Remove trailer" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost unassign-trailer"
-                  aria-label="Remove trailer"
-                  onClick={unassignTrailer}
-                  disabled={assigning}
-                >
-                  <CloseIcon />
-                </button>
-              </Tooltip>
-            </div>
           </div>
-        ) : null}
 
-        {!hasTrailer ? (
-          <button
-            type="button"
-            className="assign-btn"
-            onClick={() => {
-              openAssignPicker("trailer");
-            }}
-          >
-            ASSIGN TRAILER
-          </button>
-        ) : null}
-
-        {renderAssignPicker("trailer")}
-      </div>
-
-      {/* Driver */}
-      <div style={{ marginTop: 16, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-        {hasDriver ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              <AvatarCircle src={driverAvatarUrl} name={driverName} seed={selected?.driverId || driverName} size={44} />
+          <div style={{ borderTop: "1px solid #eef2f6", paddingTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <AccessTimeIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {driverName || "Driver"}
-                </div>
-                <div style={{ color: "#6b7280", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {driverPhone || ""}
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Start time</div>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {formatDateTime(extraInfo?.startTime)}
                 </div>
               </div>
             </div>
 
-            <div className="plate-actions">
-              <Tooltip label="Change driver" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost change-driver"
-                  aria-label="Change driver"
-                  onClick={() => {
-                    openAssignPicker("driver");
-                  }}
-                  disabled={assigning}
-                >
-                  <SwapHorizIcon />
-                </button>
-              </Tooltip>
-              <Tooltip label="Remove driver" wrapperProps={{ style: { display: "inline-flex" } }}>
-                <button
-                  type="button"
-                  className="small-ghost unassign-driver"
-                  aria-label="Remove driver"
-                  onClick={unassignDriver}
-                  disabled={assigning}
-                >
-                  <CloseIcon />
-                </button>
-              </Tooltip>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <AccessTimeIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>End time</div>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {formatDateTime(extraInfo?.endTime)}
+                </div>
+              </div>
             </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <LocationOnIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Start km</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{formatNumber(extraInfo?.startKilometers)}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <FlagIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>End km</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{formatNumber(extraInfo?.endKilometers)}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <AccessTimeIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Duration</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{formatDuration(extraInfo?.startTime, extraInfo?.endTime)}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <RouteIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Driven km</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  {(() => {
+                    const a = Number(extraInfo?.startKilometers);
+                    const b = Number(extraInfo?.endKilometers);
+                    if (!Number.isFinite(a) || !Number.isFinite(b)) return "—";
+                    const delta = Math.round((b - a) * 10) / 10;
+                    return Number.isFinite(delta) ? String(delta) : "—";
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <NoteIcon style={{ fontSize: 18, color: "#6b7280", marginTop: 2 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Driven for company</div>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {String(extraInfo?.drivenForCompany || "").trim() || "—"}
+                </div>
+              </div>
+            </div>
+
+            {String(extraInfo?.proofImageUrl || "").trim() ? (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Proof</div>
+                <a
+                  className="btn-outline"
+                  href={String(extraInfo.proofImageUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px" }}
+                >
+                  <DownloadIcon style={{ fontSize: 18 }} />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>View proof</span>
+                </a>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
+      ) : (
+        <>
+          {/* Truck */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {hasTruck ? (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontWeight: 600, fontSize: 16 }}>{String(selected?.truck || selected?.truckPlate || "")}</div>
+                    {prettyTruckType(selected?.truckType) ? (
+                      <div style={{ color: "#9ca3af", fontSize: 14 }}>{prettyTruckType(selected?.truckType)}</div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="plate-actions">
+                  <Tooltip label="Change truck" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost change-truck"
+                      aria-label="Change truck"
+                      onClick={() => {
+                        openAssignPicker("truck");
+                      }}
+                      disabled={assigning}
+                    >
+                      <SwapHorizIcon />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label="Remove truck" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost unassign-truck"
+                      aria-label="Remove truck"
+                      onClick={unassignTruck}
+                      disabled={assigning}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            ) : null}
 
-        {!hasDriver ? (
-          <button
-            type="button"
-            className="assign-btn"
-            onClick={() => {
-              openAssignPicker("driver");
-            }}
-          >
-            ASSIGN DRIVER
-          </button>
-        ) : null}
+            {!hasTruck ? (
+              <button
+                type="button"
+                className="assign-btn"
+                onClick={() => {
+                  openAssignPicker("truck");
+                }}
+              >
+                ASSIGN TRUCK
+              </button>
+            ) : null}
 
-        {renderAssignPicker("driver")}
-      </div>
+            {renderAssignPicker("truck")}
+          </div>
+
+          {/* Trailer */}
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+            {hasTrailer ? (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontWeight: 600, fontSize: 16 }}>{String(selected?.trailer || selected?.trailerPlate || "")}</div>
+                    {String(selected?.trailerNumber || "").trim() || prettyTrailerType(selected?.trailerType) ? (
+                      <div style={{ color: "#9ca3af", fontSize: 14 }}>
+                        {[String(selected?.trailerNumber || "").trim(), prettyTrailerType(selected?.trailerType)].filter(Boolean).join(" ")}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="plate-actions">
+                  <Tooltip label="Change trailer" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost change-trailer"
+                      aria-label="Change trailer"
+                      onClick={() => {
+                        openAssignPicker("trailer");
+                      }}
+                      disabled={assigning}
+                    >
+                      <SwapHorizIcon />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label="Remove trailer" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost unassign-trailer"
+                      aria-label="Remove trailer"
+                      onClick={unassignTrailer}
+                      disabled={assigning}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            ) : null}
+
+            {!hasTrailer ? (
+              <button
+                type="button"
+                className="assign-btn"
+                onClick={() => {
+                  openAssignPicker("trailer");
+                }}
+              >
+                ASSIGN TRAILER
+              </button>
+            ) : null}
+
+            {renderAssignPicker("trailer")}
+          </div>
+
+          {/* Driver */}
+          <div style={{ marginTop: 16, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+            {hasDriver ? (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                  <AvatarCircle src={driverAvatarUrl} name={driverName} seed={selected?.driverId || driverName} size={44} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {driverName || "Driver"}
+                    </div>
+                    <div style={{ color: "#6b7280", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {driverPhone || ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="plate-actions">
+                  <Tooltip label="Change driver" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost change-driver"
+                      aria-label="Change driver"
+                      onClick={() => {
+                        openAssignPicker("driver");
+                      }}
+                      disabled={assigning}
+                    >
+                      <SwapHorizIcon />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label="Remove driver" wrapperProps={{ style: { display: "inline-flex" } }}>
+                    <button
+                      type="button"
+                      className="small-ghost unassign-driver"
+                      aria-label="Remove driver"
+                      onClick={unassignDriver}
+                      disabled={assigning}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            ) : null}
+
+            {!hasDriver ? (
+              <button
+                type="button"
+                className="assign-btn"
+                onClick={() => {
+                  openAssignPicker("driver");
+                }}
+              >
+                ASSIGN DRIVER
+              </button>
+            ) : null}
+
+            {renderAssignPicker("driver")}
+          </div>
+        </>
+      )}
 
       <div className="detail-divider" style={{ height: 1, width: '100%', background: '#e5e7eb', marginTop: 16, marginBottom: 16 }} />
 

@@ -86,7 +86,7 @@ export default function TrailerDetailPanel({ selected, onClose, onEdit, onDelete
             </button>
             <button
               type="button"
-              className="btn-primary"
+              className="btn-danger"
               onClick={handleDelete}
               disabled={Boolean(deleting)}
               style={{ flex: 1 }}
@@ -100,7 +100,7 @@ export default function TrailerDetailPanel({ selected, onClose, onEdit, onDelete
           <button type="button" className="btn-outline" onClick={() => onEdit?.()} style={{ flex: 1 }}>
             Edit
           </button>
-          <button type="button" className="btn-primary" onClick={() => setConfirmOpen(true)} style={{ flex: 1 }}>
+          <button type="button" className="btn-danger" onClick={() => setConfirmOpen(true)} style={{ flex: 1 }}>
             Delete
           </button>
         </div>

@@ -7,6 +7,7 @@ import Card from "@/components/Card";
 import Filter from "@/components/Filter";
 import FilterCheckboxSelect from "@/components/FilterCheckboxSelect";
 import DriversTable from "@/components/DriversTable";
+import DriverDetailPanel from "@/components/DriverDetailPanel";
 import { useOverlay } from "@/hooks/useOverlay";
 import { useUsers } from "@/hooks/useUsers";
 import { useTrucks } from "@/hooks/useTrucks";
@@ -33,6 +34,8 @@ export default function Page() {
   const [status, setStatus] = useState([]);
   const [age, setAge] = useState([]);
   const [truck, setTruck] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const drivers = useMemo(() => {
     return (Array.isArray(users) ? users : [])
@@ -113,6 +116,12 @@ export default function Page() {
     });
   }, [drivers, query, status, age, truck]);
 
+  const resolvedSelected = useMemo(() => {
+    const sid = String(selected?.id || "");
+    if (!sid) return null;
+    return drivers.find((d) => String(d.id) === sid) || null;
+  }, [selected, drivers]);
+
   const assignTruck = (driverId, truckId, currentTruckId) => {
     // When clearing selection, unassign from the currently linked truck.
     if (!truckId) {
@@ -133,6 +142,30 @@ export default function Page() {
     return apiFetch(`/users/${userId}`, { method: "PUT", body: { status: nextStatus } })
       .then(() => mutateUsers())
       .catch(() => null);
+  };
+
+  const handleEdit = () => {
+    if (!resolvedSelected) return;
+    openOverlay("driver", {
+      mode: "edit",
+      driver: resolvedSelected,
+      trucks: activeTrucksForDropdown.map((t) => ({ id: t.id, name: t.licensePlate || t.id })),
+      afterSave: () => Promise.all([mutateUsers(), mutateTrucks()]),
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!resolvedSelected?.id) return;
+    setDeleting(true);
+    try {
+      await apiFetch(`/users/${resolvedSelected.id}`, { method: "DELETE" });
+      await Promise.all([mutateUsers(), mutateTrucks()]);
+      setSelected(null);
+    } catch {
+      // Keep behavior simple.
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -178,51 +211,84 @@ export default function Page() {
         </button>
       </div>
 
-      {/* Filters row */}
-      <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
-        <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
-          <div className="filters-row flex flex-wrap gap-2 w-full items-end" style={{ marginTop: 0, marginBottom: 0 }}>
-            <Filter label={"Search"}>
-              <div className="search-box" style={{ width: 242 }}>
-                <SearchIcon className="search-icon" />
-                <input className="search-input" placeholder="Search..." value={query} onChange={(e) => setQuery(e.target.value)} />
+      {/* Main two-column grid: left table + right detail (when selected) */}
+      <div
+        className="dashboard-main"
+        style={{
+          display: "grid",
+          gridTemplateColumns: resolvedSelected ? "minmax(0,2fr) minmax(320px,380px)" : "minmax(0,1fr)",
+          gap: 0,
+          flex: "1 1 0%",
+          minHeight: 0,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+          {/* Filters row */}
+          <Card className="card header-card" style={{ padding: 16, borderBottom: "1px solid #e5e7eb" }}>
+            <div className="w-full flex flex-wrap gap-x-2 gap-y-2">
+              <div className="filters-row flex flex-wrap gap-2 w-full items-end" style={{ marginTop: 0, marginBottom: 0 }}>
+                <Filter label={"Search"}>
+                  <div className="search-box" style={{ width: 242 }}>
+                    <SearchIcon className="search-icon" />
+                    <input
+                      className="search-input"
+                      placeholder="Search..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </div>
+                </Filter>
+
+                <FilterCheckboxSelect
+                  label="Status"
+                  value={Array.isArray(status) ? status : []}
+                  onChange={setStatus}
+                  placeholder="All"
+                  options={statusOptions.filter((o) => o.value !== "all")}
+                />
+                <FilterCheckboxSelect
+                  label="Age"
+                  value={Array.isArray(age) ? age : []}
+                  onChange={setAge}
+                  placeholder="All"
+                  options={ageOptions.filter((o) => o.value !== "all")}
+                />
+                <FilterCheckboxSelect
+                  label="Truck"
+                  value={Array.isArray(truck) ? truck : []}
+                  onChange={setTruck}
+                  placeholder="All"
+                  options={truckOptions.filter((o) => o.value !== "all")}
+                />
               </div>
-            </Filter>
+            </div>
+          </Card>
 
-            <FilterCheckboxSelect
-              label="Status"
-              value={Array.isArray(status) ? status : []}
-              onChange={setStatus}
-              placeholder="All"
-              options={statusOptions.filter((o) => o.value !== "all")}
+          <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
+            <DriversTable
+              drivers={visibleDrivers}
+              trucks={activeTrucksForDropdown.map((t) => ({ id: t.id, name: t.licensePlate || t.id }))}
+              onAssignTruck={assignTruck}
+              onToggleStatus={toggleStatus}
+              selected={resolvedSelected}
+              setSelected={setSelected}
             />
-            <FilterCheckboxSelect
-              label="Age"
-              value={Array.isArray(age) ? age : []}
-              onChange={setAge}
-              placeholder="All"
-              options={ageOptions.filter((o) => o.value !== "all")}
-            />
-            <FilterCheckboxSelect
-              label="Truck"
-              value={Array.isArray(truck) ? truck : []}
-              onChange={setTruck}
-              placeholder="All"
-              options={truckOptions.filter((o) => o.value !== "all")}
-            />
-          </div>
+          </Card>
         </div>
-      </Card>
 
-      {/* Table */}
-      <Card className="card card-no-hpad flex-1 min-h-0" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
-        <DriversTable
-          drivers={visibleDrivers}
-          trucks={activeTrucksForDropdown.map((t) => ({ id: t.id, name: t.licensePlate || t.id }))}
-          onAssignTruck={assignTruck}
-          onToggleStatus={toggleStatus}
-        />
-      </Card>
+        {resolvedSelected ? (
+          <aside className="w-full flex flex-col bg-white min-h-0" style={{ flexShrink: 0, height: "100%", overflow: "hidden" }}>
+            <DriverDetailPanel
+              selected={resolvedSelected}
+              onClose={() => setSelected(null)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              deleting={deleting}
+            />
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }

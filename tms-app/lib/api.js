@@ -10,4 +10,9 @@ export const api = {
   companies: `${API_URL}/companies`,
   clients: `${API_URL}/clients`,
   trucks: `${API_URL}/trucks`,
+
+  geo: {
+    directions: `${API_URL}/geo/directions`,
+    autocomplete: `${API_URL}/geo/autocomplete`,
+  },
 };

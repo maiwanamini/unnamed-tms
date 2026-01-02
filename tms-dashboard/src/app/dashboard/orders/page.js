@@ -226,6 +226,7 @@ export default function Page() {
         status: mapStatus(o?.status),
         createdAt: o?.createdAt || o?.date,
         tableDate: tableDate ? tableDate.toISOString() : (o?.createdAt || o?.date),
+        extraInfo: o?.extraInfo || null,
         stops: stops.map((s) => toStop(s)),
       };
     };

@@ -9,7 +9,7 @@ import PortalSelect from "@/components/PortalSelect";
 import { formatDateDDMMYYYY } from "@/lib/date";
 import AvatarCircle from "@/components/AvatarCircle";
 
-export default function DriversTable({ drivers = [], trucks = [], onAssignTruck, onToggleStatus }) {
+export default function DriversTable({ drivers = [], trucks = [], onAssignTruck, onToggleStatus, selected, setSelected }) {
   const wrapperRef = useRef(null);
   const [rowsPerPage, setRowsPerPage] = useState(Infinity);
   const [page, setPage] = useState(0);
@@ -129,7 +129,12 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck,
             </thead>
             <tbody>
               {slice.map((d) => (
-                <tr key={d.id}>
+                <tr
+                  key={d.id}
+                  onClick={() => setSelected?.(d)}
+                  className={selected?.id === d?.id ? "selected" : ""}
+                  style={{ cursor: setSelected ? "pointer" : "default" }}
+                >
                   <td style={{ padding: "12px 8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                       <AvatarCircle src={d.avatarUrl} name={d.fullName} seed={d.id} size={28} />
@@ -166,20 +171,31 @@ export default function DriversTable({ drivers = [], trucks = [], onAssignTruck,
 
                   <td style={{ padding: "12px 8px" }}>
                     {isEditing(d.id, "truck") ? (
-                      <PortalSelect
-                        value={d.truckId || ""}
-                        onChange={(v) => {
-                          onAssignTruck?.(d.id, v || null, d.truckId || null);
-                        }}
-                        placeholder=""
-                        options={trucks.map((t) => ({ value: t.id, label: t.name }))}
-                        alwaysShowSearch
-                        triggerClassName="assign-select assign-select-trigger"
-                        openOnMount
-                        onClose={() => setEditing(null)}
-                      />
+                      <div onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                        <PortalSelect
+                          value={d.truckId || ""}
+                          onChange={(v) => {
+                            onAssignTruck?.(d.id, v || null, d.truckId || null);
+                          }}
+                          placeholder=""
+                          options={trucks.map((t) => ({ value: t.id, label: t.name }))}
+                          alwaysShowSearch
+                          triggerClassName="assign-select assign-select-trigger"
+                          menuClassName="status-dropdown assign-select-dropdown"
+                          openOnMount
+                          onClose={() => setEditing(null)}
+                        />
+                      </div>
                     ) : (
-                      <button type="button" className="assign-link" onClick={() => setEditing({ id: d.id, field: "truck" })}>
+                      <button
+                        type="button"
+                        className="assign-link"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditing({ id: d.id, field: "truck" });
+                        }}
+                      >
                         {d.truckName ? null : <AddBoxOutlinedIcon style={{ fontSize: 18 }} />}
                         {d.truckName ? <span>{d.truckName}</span> : <span>Add truck</span>}
                       </button>

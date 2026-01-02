@@ -524,7 +524,6 @@ export default function NewOrderForm({ mode = "create", orderId } = {}) {
     for (let i = 0; i < stops.length; i++) {
       const s = stops[i];
       const stopErr = { locationName: "", address: "" };
-      if (!String(s.locationName || "").trim()) stopErr.locationName = "Please enter a location name.";
       if (!String(s.address || "").trim()) stopErr.address = "Please enter a location address.";
       if (stopErr.locationName || stopErr.address) {
         next.stopByKey[s.key] = stopErr;
@@ -958,7 +957,7 @@ export default function NewOrderForm({ mode = "create", orderId } = {}) {
                 </div>
 
                 <div>
-                  <label>Location Name</label>
+                  <label>Location Name (Optional)</label>
                   <TextInput
                     bare
                     placeholder="Location Name"
