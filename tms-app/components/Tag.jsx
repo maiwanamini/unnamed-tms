@@ -57,7 +57,7 @@ const DEFAULT_LABELS = {
   moving: "Moving",
   completed: "Completed",
   canceled: "Canceled",
-  distance: "16km",
+  distance: "..km",
 };
 
 const Tag = ({ variant = "moving", label, distance, style }) => {
@@ -65,7 +65,7 @@ const Tag = ({ variant = "moving", label, distance, style }) => {
   const text =
     label ??
     (variant === "distance"
-      ? distance ?? DEFAULT_LABELS.distance
+      ? distance || DEFAULT_LABELS.distance
       : DEFAULT_LABELS[variant]);
 
   const isDistance = variant === "distance";
