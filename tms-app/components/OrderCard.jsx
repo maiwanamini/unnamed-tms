@@ -2,8 +2,16 @@ import { View, TouchableOpacity } from "react-native";
 import { ThemedText } from "./ThemedText";
 import Tag from "./Tag";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React from "react";
+import React, { useMemo } from "react";
 import global from "../styles/global";
+import { useDistance } from "../hooks/useDistance";
+
+// Format distance like the dashboard
+const formatKm = (km) => {
+  if (!Number.isFinite(km)) return "";
+  if (km < 1) return `${Math.max(0.1, Math.round(km * 10) / 10)}km`;
+  return `${Math.round(km * 10) / 10}km`;
+};
 
 // OrderCard now accepts an `order` prop and renders available fields
 const OrderCard = ({ order = {}, stops = [], onPress }) => {
@@ -38,6 +46,18 @@ const OrderCard = ({ order = {}, stops = [], onPress }) => {
 
   const firstStopTime = formatTime(firstStop?.plannedTime);
   const lastStopTime = formatTime(lastStop?.plannedTime);
+
+  // Fetch distance between first and last stop
+  // Try both field names: latitude/longitude and geo.lat/geo.lng
+  const { distanceKm } = useDistance(
+    firstStop?.latitude ?? firstStop?.geo?.lat,
+    firstStop?.longitude ?? firstStop?.geo?.lng,
+    lastStop?.latitude ?? lastStop?.geo?.lat,
+    lastStop?.longitude ?? lastStop?.geo?.lng
+  );
+
+  // Format distance for display (uses instant Haversine fallback)
+  const distanceDisplay = useMemo(() => formatKm(distanceKm), [distanceKm]);
 
   const statusToVariant = {
     pending: "planned",
@@ -93,7 +113,11 @@ const OrderCard = ({ order = {}, stops = [], onPress }) => {
           </View>
         </View>
         <View style={{ width: "100%", alignItems: "flex-end" }}>
-          <Tag variant="distance" style={{ width: "fit-content" }} />
+          <Tag
+            variant="distance"
+            distance={distanceDisplay}
+            style={{ width: "fit-content" }}
+          />
         </View>
       </View>
     </TouchableOpacity>
