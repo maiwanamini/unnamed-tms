@@ -1,27 +1,27 @@
-import React, { useMemo, useState, useCallback } from "react";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
-  View,
+  Alert,
+  Image,
   ScrollView,
   StyleSheet,
   TextInput,
-  Alert,
-  Image,
   TouchableOpacity,
-  FlatList,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { ThemedText } from "../../../components/ThemedText";
+import useSWR from "swr";
 import { ThemedButton } from "../../../components/ThemedButton";
+import { ThemedText } from "../../../components/ThemedText";
+import { useAuth } from "../../../context/AuthContext";
+import fetcher from "../../../lib/_fetcher";
+import { api } from "../../../lib/api";
 import colors from "../../../theme/colors";
 import spacing from "../../../theme/spacing";
-import { api } from "../../../lib/api";
-import { useAuth } from "../../../context/AuthContext";
-import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
-import useSWR from "swr";
-import fetcher from "../../../lib/_fetcher";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 // Native time picker component using DateTimePicker
 const TimeSelector = ({ label, value, onChange }) => {
@@ -60,6 +60,9 @@ const TimeSelector = ({ label, value, onChange }) => {
         mode="time"
         is24Hour={true}
         display="default"
+        themeVariant="light"
+        textColor={colors.text}
+        accentColor={colors.accent}
         onChange={handleChange}
       />
     </View>
@@ -69,7 +72,7 @@ const TimeSelector = ({ label, value, onChange }) => {
 const steps = [
   { key: "trip", label: "Trip" },
   { key: "mileage", label: "Mileage" },
-  { key: "documents", label: "Document (optional)" },
+  { key: "documents", label: "Document" },
   { key: "review", label: "Review" },
 ];
 
@@ -371,7 +374,13 @@ const ExtraOrderInfo = () => {
                 style={styles.input}
                 placeholderTextColor={colors.muted}
               />
-              <ThemedText style={styles.dropdownArrow}>▼</ThemedText>
+              <View pointerEvents="none" style={styles.dropdownArrowWrap}>
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={20}
+                  color={colors.muted}
+                />
+              </View>
               {showDropdown && (
                 <View style={styles.dropdownList}>
                   {clientsLoading ? (
@@ -619,7 +628,14 @@ const ExtraOrderInfo = () => {
                 isDone && styles.stepBadgeDone,
               ]}
             >
-              <ThemedText style={styles.stepBadgeText}>{index + 1}</ThemedText>
+              <ThemedText
+                style={[
+                  styles.stepBadgeText,
+                  isActive && styles.stepBadgeTextActive,
+                ]}
+              >
+                {index + 1}
+              </ThemedText>
             </View>
             <ThemedText
               style={[styles.stepLabel, isActive && styles.stepLabelActive]}
@@ -733,6 +749,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "600",
   },
+  stepBadgeTextActive: {
+    color: colors.backgroundOnTop,
+  },
   stepLabel: {
     fontSize: 12,
     color: colors.muted,
@@ -787,14 +806,12 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 1000,
   },
-  dropdownArrow: {
+  dropdownArrowWrap: {
     position: "absolute",
     right: SPACING_SM,
-    top: "50%",
-    transform: [{ translateY: -8 }],
-    color: colors.muted,
-    fontSize: 12,
-    pointerEvents: "none",
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
   dropdownList: {
     position: "absolute",
