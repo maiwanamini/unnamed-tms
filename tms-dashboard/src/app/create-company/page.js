@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetcher";
 import PhoneInput from "@/components/PhoneInput";
 import TextInput from "@/components/TextInput";
+import AddressAutocompleteInput from "@/components/AddressAutocompleteInput";
 
 export default function CreateCompanyPage() {
   const router = useRouter();
@@ -224,13 +225,16 @@ export default function CreateCompanyPage() {
               {fieldErrors.phone ? <div className="text-xs text-red-600 mt-1">{fieldErrors.phone}</div> : null}
             </div>
 
-            <TextInput
-              label="Address"
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Address (optional)"
-            />
+            <div className="flex flex-col gap-0">
+              <label className="block text-sm font-medium text-slate-700">Address</label>
+              <AddressAutocompleteInput
+                value={address}
+                placeholder="Address (optional)"
+                onChangeText={(v) => setAddress(v)}
+                onSelect={(it) => setAddress(String(it?.label || ""))}
+                disabled={submitting}
+              />
+            </div>
 
             {error ? (
               <div className="text-sm text-red-600" role="alert">
